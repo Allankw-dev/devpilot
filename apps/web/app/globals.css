@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 222 30% 12%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 40%;
+    --border: 220 14% 86%;
+    --primary: 231 70% 46%;
+    --primary-foreground: 0 0% 100%;
+    --success: 152 60% 28%;
+    --danger: 4 70% 42%;
+  }
+
+  .dark {
+    --background: 222 28% 8%;
+    --foreground: 220 20% 94%;
+    --muted: 222 20% 14%;
+    --muted-foreground: 220 10% 64%;
+    --border: 222 16% 22%;
+    --primary: 231 85% 72%;
+    --primary-foreground: 222 28% 8%;
+    --success: 152 55% 55%;
+    --danger: 4 80% 68%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
