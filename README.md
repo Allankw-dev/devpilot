@@ -29,6 +29,12 @@ npm run dev
 Open http://localhost:3001. The page shows API, database and Redis status.
 Health endpoint: http://localhost:8001/api/v1/health
 
+## Auth
+
+Sign-in uses Supabase Auth; organizations, teams and roles live in our own Postgres.
+Setup steps are in [`docs/AUTH.md`](docs/AUTH.md). After pulling new migrations run
+`alembic upgrade head` in `apps\api`.
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools
@@ -44,6 +50,6 @@ DevPilot uses non-default host ports so it doesn't clash with other dev tools
 ## Checks
 
 ```powershell
-cd apps\api; pytest; ruff check .; mypy .
+cd apps\api; pytest; ruff check .; mypy .; alembic check
 cd apps\web; npm run lint; npm run typecheck; npm run build
 ```

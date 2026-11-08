@@ -42,7 +42,14 @@ jobs:
       - run: ruff check .
       - run: mypy .
       - run: alembic upgrade head
-      - run: pytest -q
+      - name: Fail if models and migrations have drifted
+        run: alembic check
+      - name: Create test database
+        run: PGPASSWORD=devpilot psql -h localhost -U devpilot -d devpilot -c "CREATE DATABASE devpilot_test"
+      - name: Tests (on Postgres)
+        run: pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://devpilot:devpilot@localhost:5432/devpilot_test
 
   web:
     runs-on: ubuntu-latest

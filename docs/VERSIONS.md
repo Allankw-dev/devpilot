@@ -22,6 +22,7 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | psycopg | 3.3.8 |
 | redis (client) | 6.4.0 |
 | pgvector (client) | 0.5.1 |
+| PyJWT / cryptography | 2.15.1 / 50.0.2 |
 | ruff / mypy / pytest | 0.17.4 / 1.20.2 / 8.4.2 |
 
 ## Web (apps/web)
@@ -33,7 +34,8 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | typescript | 5.9.x |
 | @tanstack/react-query | 5.x |
 | zustand | 5.x |
+| @supabase/supabase-js / @supabase/ssr | 2.119.0 / 0.12.7 |
 | eslint | 8.57 |
 
 Tailwind is on v3 because shadcn/ui's config and plugins are most stable there.
-Celery, Gemini SDK, auth and pgvector columns arrive in later phases.
+Celery, Gemini SDK and pgvector columns arrive in later phases.

@@ -2,7 +2,7 @@ import json
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -23,6 +23,21 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://devpilot:devpilot@localhost:5432/devpilot"
     redis_url: str = "redis://localhost:6379/0"
+
+    # Supabase Auth. SUPABASE_URL is public. Newer projects sign tokens with asymmetric
+    # keys (verified via JWKS, no secret needed). The secret is only a legacy HS256 fallback.
+    supabase_url: str | None = None
+    supabase_jwt_audience: str = "authenticated"
+    supabase_jwt_secret: SecretStr | None = None
+
+    @property
+    def supabase_issuer(self) -> str | None:
+        return f"{self.supabase_url.rstrip('/')}/auth/v1" if self.supabase_url else None
+
+    @property
+    def supabase_jwks_url(self) -> str | None:
+        issuer = self.supabase_issuer
+        return f"{issuer}/.well-known/jwks.json" if issuer else None
 
     @field_validator("cors_origins", mode="before")
     @classmethod

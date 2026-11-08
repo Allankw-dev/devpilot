@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { SystemStatus } from "@/components/system-status";
 import { config } from "@/lib/config";
 
@@ -9,6 +11,12 @@ export default function Home() {
       <div className="mt-8">
         <SystemStatus />
       </div>
+      <Link
+        href="/dashboard"
+        className="mt-8 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      >
+        Sign in
+      </Link>
     </main>
   );
 }

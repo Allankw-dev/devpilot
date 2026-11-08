@@ -15,10 +15,14 @@ certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
+cffi==2.1.1 ; platform_python_implementation != 'PyPy'
+    # via cryptography
 click==8.5.1
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via pytest
+cryptography==50.0.2
+    # via pyjwt
 fastapi==0.162.2
     # via devpilot-api (pyproject.toml)
 greenlet==3.5.6 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
@@ -63,6 +67,8 @@ psycopg==3.3.8
     # via devpilot-api (pyproject.toml)
 psycopg-binary==3.3.8 ; implementation_name != 'pypy'
     # via psycopg
+pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
 pydantic==2.14.3
     # via
     #   devpilot-api (pyproject.toml)
@@ -74,6 +80,8 @@ pydantic-settings==2.16.2
     # via devpilot-api (pyproject.toml)
 pygments==2.21.0
     # via pytest
+pyjwt==2.15.1
+    # via devpilot-api (pyproject.toml)
 pytest==8.4.2
     # via devpilot-api (pyproject.toml)
 python-dotenv==1.2.4
