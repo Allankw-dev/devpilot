@@ -17,7 +17,7 @@ python -m venv .venv
 pip install -r requirements.lock
 pip install -e . --no-deps
 alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 
 # Web (new terminal)
 cd apps\web
@@ -26,8 +26,20 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. The page shows API, database and Redis status.
-Health endpoint: http://localhost:8000/api/v1/health
+Open http://localhost:3001. The page shows API, database and Redis status.
+Health endpoint: http://localhost:8001/api/v1/health
+
+## Ports
+
+DevPilot uses non-default host ports so it doesn't clash with other dev tools
+(WSL port forwarding commonly takes 3000, 5432 and 8000):
+
+| Service | Port |
+|---|---|
+| Web | 3001 |
+| API | 8001 |
+| Postgres (Docker) | 5433 |
+| Redis (Docker) | 6380 |
 
 ## Checks
 
