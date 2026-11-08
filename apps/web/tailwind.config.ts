@@ -17,8 +17,8 @@ const config: Config = {
       },
       borderRadius: { lg: "0.5rem", md: "0.375rem", sm: "0.25rem" },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        sans: ["ui-sans-serif", "system-ui", "Segoe UI", "Roboto", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
       },
     },
   },
