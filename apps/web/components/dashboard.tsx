@@ -1,18 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ApiError, authedApi } from "@/lib/api";
 import { config } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
-
-async function accessToken(): Promise<string> {
-  const { data } = await createClient().auth.getSession();
-  if (!data.session) throw new ApiError("Not signed in", 401);
-  return data.session.access_token;
-}
+import { accessToken } from "@/lib/supabase/token";
 
 export function Dashboard() {
   const router = useRouter();
@@ -78,7 +74,9 @@ export function Dashboard() {
           <ul className="mt-4 divide-y divide-border border-y border-border">
             {me.data.organizations.map((org) => (
               <li key={org.id} className="flex items-center justify-between py-3">
-                <span className="font-medium">{org.name}</span>
+                <Link href={`/orgs/${org.id}`} className="font-medium hover:underline">
+                  {org.name}
+                </Link>
                 <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
                   {org.role}
                 </span>

@@ -1,17 +1,20 @@
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.config import get_settings
 from app.core.roles import Role, at_least
 from app.core.security import AuthError, AuthUnavailable, TokenVerifier, get_token_verifier
 from app.db.models import Membership, Organization, User
-from app.db.session import get_db
+from app.db.session import get_db, get_session_factory
+from app.services.github.client import GitHubClient
 from app.services.users import sync_user
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -79,3 +82,12 @@ def require_role(minimum: Role) -> Callable[[OrgContext], OrgContext]:
 AnyMember = Annotated[OrgContext, Depends(get_org_context)]
 AdminCtx = Annotated[OrgContext, Depends(require_role(Role.admin))]
 OwnerCtx = Annotated[OrgContext, Depends(require_role(Role.owner))]
+
+
+@lru_cache
+def get_github_client() -> GitHubClient:
+    return GitHubClient(get_settings())
+
+
+def get_session_factory_dep() -> sessionmaker[Session]:
+    return get_session_factory()

@@ -23,6 +23,7 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | redis (client) | 6.4.0 |
 | pgvector (client) | 0.5.1 |
 | PyJWT / cryptography | 2.15.1 / 50.0.2 |
+| httpx (GitHub client) | 0.28.1 |
 | ruff / mypy / pytest | 0.17.4 / 1.20.2 / 8.4.2 |
 
 ## Web (apps/web)
@@ -39,3 +40,7 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 
 Tailwind is on v3 because shadcn/ui's config and plugins are most stable there.
 Celery, Gemini SDK and pgvector columns arrive in later phases.
+
+GitHub REST API version is pinned to `2022-11-28` (setting `GITHUB_API_VERSION`).
+GitHub released `2026-03-10` with breaking changes; upgrade deliberately, not by accident.
+Sync runs as a FastAPI background task for now. Celery arrives with the indexing phase.

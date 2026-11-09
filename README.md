@@ -35,6 +35,11 @@ Sign-in uses Supabase Auth; organizations, teams and roles live in our own Postg
 Setup steps are in [`docs/AUTH.md`](docs/AUTH.md). After pulling new migrations run
 `alembic upgrade head` in `apps\api`.
 
+## GitHub
+
+Repositories, pull requests, issues, commits and CI runs come from a read-only GitHub App.
+Setup, including the webhook tunnel for local testing, is in [`docs/GITHUB.md`](docs/GITHUB.md).
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

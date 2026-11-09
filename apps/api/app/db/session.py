@@ -30,6 +30,13 @@ def get_engine() -> Engine:
     return _engine
 
 
+def get_session_factory() -> sessionmaker[Session]:
+    """For background work that needs its own session outside a request."""
+    get_engine()
+    assert _session_factory is not None
+    return _session_factory
+
+
 def get_db() -> Iterator[Session]:
     get_engine()
     assert _session_factory is not None

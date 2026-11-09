@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { supabaseKey, supabaseUrl } from "@/lib/supabase/env";
 
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = ["/dashboard", "/orgs", "/github"];
 
 function redirectTo(request: NextRequest, source: NextResponse, path: string, search = "") {
   const url = request.nextUrl.clone();
@@ -43,7 +43,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && isProtected) {
-    return redirectTo(request, response, "/login", `?next=${encodeURIComponent(path)}`);
+    return redirectTo(request, response, "/login", `?next=${encodeURIComponent(path + request.nextUrl.search)}`);
   }
   if (user && path === "/login") return redirectTo(request, response, "/dashboard");
   return response;

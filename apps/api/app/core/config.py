@@ -1,5 +1,6 @@
 import json
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import SecretStr, field_validator
@@ -29,6 +30,56 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_jwt_audience: str = "authenticated"
     supabase_jwt_secret: SecretStr | None = None
+
+    # GitHub App (setup: docs/GITHUB.md). All values come from the GitHub App's settings page.
+    github_app_id: str | None = None
+    github_app_slug: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: SecretStr | None = None
+    github_webhook_secret: SecretStr | None = None
+    github_app_private_key: SecretStr | None = None  # PEM text; "\\n" is accepted for newlines
+    github_app_private_key_path: str | None = None  # or a path to the .pem file (easier on Windows)
+    github_api_url: str = "https://api.github.com"
+    github_web_url: str = "https://github.com"
+    github_api_version: str = "2022-11-28"
+
+    def github_private_key(self) -> str | None:
+        inline = (
+            self.github_app_private_key.get_secret_value().strip()
+            if self.github_app_private_key
+            else ""
+        )
+        if inline:
+            return inline.replace("\\n", "\n")
+        path = (self.github_app_private_key_path or "").strip()
+        if path:
+            return Path(path).read_text(encoding="utf-8")
+        return None
+
+    def github_missing_settings(self) -> list[str]:
+        """Names (never values) of required GitHub settings that are not set."""
+
+        def blank(value: str | SecretStr | None) -> bool:
+            text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
+            return not text.strip()
+
+        missing = [
+            name
+            for name, value in (
+                ("GITHUB_APP_ID", self.github_app_id),
+                ("GITHUB_APP_SLUG", self.github_app_slug),
+                ("GITHUB_CLIENT_ID", self.github_client_id),
+                ("GITHUB_CLIENT_SECRET", self.github_client_secret),
+                ("GITHUB_WEBHOOK_SECRET", self.github_webhook_secret),
+            )
+            if blank(value)
+        ]
+        if (
+            blank(self.github_app_private_key)
+            and not (self.github_app_private_key_path or "").strip()
+        ):
+            missing.append("GITHUB_APP_PRIVATE_KEY_PATH")
+        return missing
 
     @property
     def supabase_issuer(self) -> str | None:

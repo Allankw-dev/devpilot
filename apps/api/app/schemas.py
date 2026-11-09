@@ -89,3 +89,76 @@ class TeamMemberOut(BaseModel):
 
 class TeamMemberAdd(BaseModel):
     user_id: uuid.UUID
+
+
+# ---------- GitHub ----------
+
+
+class GithubInstallationOut(BaseModel):
+    id: uuid.UUID
+    org_id: uuid.UUID
+    installation_id: int
+    account_login: str
+    account_type: str
+    repository_selection: str
+    suspended: bool
+    sync_status: str
+    sync_error: str | None
+    last_synced_at: datetime | None
+    created_at: datetime
+
+
+class GithubStatusOut(BaseModel):
+    configured: bool
+    missing: list[str]  # names of unset settings; only shown to admins
+    installations: list[GithubInstallationOut]
+
+
+class InstallUrlOut(BaseModel):
+    url: str
+
+
+class ClaimRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=200)
+    installation_id: int = Field(gt=0)
+    state: str | None = Field(default=None, max_length=100)
+
+
+class RepoOut(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    private: bool
+    archived: bool
+    language: str | None
+    default_branch: str | None
+    html_url: str
+    pushed_at: datetime | None
+    open_pull_requests: int
+    open_issues: int
+    last_commit_at: datetime | None
+    ci: str  # passing | failing | running | other | none
+
+
+class CommitOut(BaseModel):
+    sha: str
+    message: str
+    author: str | None
+    repository: str
+    committed_at: datetime | None
+    url: str | None
+
+
+class CiSummary(BaseModel):
+    passing: int
+    failing: int
+    running: int
+    other: int
+    none: int
+
+
+class OverviewOut(BaseModel):
+    repositories: int
+    open_pull_requests: int
+    open_issues: int
+    ci: CiSummary
+    recent_commits: list[CommitOut]
