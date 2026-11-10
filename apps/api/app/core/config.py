@@ -1,7 +1,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -43,6 +43,24 @@ class Settings(BaseSettings):
     github_web_url: str = "https://github.com"
     github_api_version: str = "2022-11-28"
 
+    webhook_delivery_retention_days: int = 7  # GitHub only allows redelivery for a few days
+
+    # AI (setup: docs/AI.md). Model names are deliberately required settings with no default:
+    # providers retire and rename models, so a name baked into code goes stale silently.
+    llm_provider: Literal["gemini", "anthropic"] = "gemini"
+    embedding_provider: Literal["gemini"] = "gemini"
+    llm_timeout_seconds: float = 60.0  # per provider call
+    llm_max_attempts: int = 3  # calls per operation, retries included
+    llm_max_output_tokens: int = 4096
+    embedding_dimensions: int = 768  # must match the pgvector column added with indexing
+
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str | None = None
+    gemini_embedding_model: str | None = None
+
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str | None = None
+
     def github_private_key(self) -> str | None:
         inline = (
             self.github_app_private_key.get_secret_value().strip()
@@ -80,6 +98,36 @@ class Settings(BaseSettings):
         ):
             missing.append("GITHUB_APP_PRIVATE_KEY_PATH")
         return missing
+
+    def llm_missing_settings(self) -> list[str]:
+        """Names (never values) of settings the selected generation provider still needs."""
+
+        def blank(value: str | SecretStr | None) -> bool:
+            text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
+            return not text.strip()
+
+        if self.llm_provider == "anthropic":
+            pairs = (
+                ("ANTHROPIC_API_KEY", self.anthropic_api_key),
+                ("ANTHROPIC_MODEL", self.anthropic_model),
+            )
+        else:
+            pairs = (("GEMINI_API_KEY", self.gemini_api_key), ("GEMINI_MODEL", self.gemini_model))
+        return [name for name, value in pairs if blank(value)]
+
+    def embedding_missing_settings(self) -> list[str]:
+        def blank(value: str | SecretStr | None) -> bool:
+            text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
+            return not text.strip()
+
+        return [
+            name
+            for name, value in (
+                ("GEMINI_API_KEY", self.gemini_api_key),
+                ("GEMINI_EMBEDDING_MODEL", self.gemini_embedding_model),
+            )
+            if blank(value)
+        ]
 
     @property
     def supabase_issuer(self) -> str | None:

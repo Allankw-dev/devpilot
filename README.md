@@ -40,6 +40,11 @@ Setup steps are in [`docs/AUTH.md`](docs/AUTH.md). After pulling new migrations 
 Repositories, pull requests, issues, commits and CI runs come from a read-only GitHub App.
 Setup, including the webhook tunnel for local testing, is in [`docs/GITHUB.md`](docs/GITHUB.md).
 
+## AI
+
+Gemini through a provider abstraction (Anthropic optional). Needs an API key and model names in
+`.env`; see [`docs/AI.md`](docs/AI.md). Verify with **Test AI connection** on an organization page.
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

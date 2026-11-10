@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -239,5 +240,35 @@ class WebhookDelivery(Base):
     delivery_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event: Mapped[str] = mapped_column(String(50))
     received_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+class LlmUsage(Base):
+    """One row per AI operation: who used it, which model, how many tokens. Never the prompt
+    or the reply, so usage tracking can't leak repository code."""
+
+    __tablename__ = "llm_usage"
+    __table_args__ = (
+        CheckConstraint("status IN ('ok', 'error')", name="status_valid"),
+        Index("ix_llm_usage_org_id_created_at", "org_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    provider: Mapped[str] = mapped_column(String(20))
+    model: Mapped[str] = mapped_column(String(100))
+    operation: Mapped[str] = mapped_column(String(20))  # generate | structured | tools | embed
+    feature: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(10))
+    error_code: Mapped[str | None] = mapped_column(String(30))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    calls: Mapped[int] = mapped_column(Integer, default=1)  # provider calls, retries included
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

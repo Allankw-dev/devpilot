@@ -1,9 +1,11 @@
 import json
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.concurrency import run_in_threadpool
@@ -22,7 +24,11 @@ MAX_BODY_BYTES = 25 * 1024 * 1024  # GitHub's own payload cap
 
 
 def _apply(
-    factory: sessionmaker[Session], delivery: str, event: str, payload: dict[str, Any]
+    factory: sessionmaker[Session],
+    delivery: str,
+    event: str,
+    payload: dict[str, Any],
+    retention: timedelta,
 ) -> tuple[str, list[uuid.UUID]]:
     scheduled: list[uuid.UUID] = []
     with factory() as db:
@@ -33,6 +39,9 @@ def _apply(
             db.rollback()
             return "duplicate", []
         outcome = process_event(db, event, payload, scheduled.append)
+        # Old ids can't be redelivered any more, so don't keep them forever.
+        cutoff = datetime.now(UTC) - retention
+        db.execute(delete(WebhookDelivery).where(WebhookDelivery.received_at < cutoff))
         db.commit()  # the delivery record and its effects commit together
     return outcome, scheduled
 
@@ -73,7 +82,14 @@ async def github_webhook(
     if not isinstance(payload, dict):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unexpected payload")
 
-    outcome, scheduled = await run_in_threadpool(_apply, factory, delivery, event, payload)
+    outcome, scheduled = await run_in_threadpool(
+        _apply,
+        factory,
+        delivery,
+        event,
+        payload,
+        timedelta(days=settings.webhook_delivery_retention_days),
+    )
     for installation_pk in scheduled:
         background.add_task(run_sync, factory, client, installation_pk)
 

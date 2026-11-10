@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { AiPanel } from "@/components/ai-panel";
 import { ApiError, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
 import { accessToken } from "@/lib/supabase/token";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,8 @@ export function OrgView() {
           </p>
         )}
       </section>
+
+      {org.data && <AiPanel orgId={orgId} isAdmin={isAdmin} />}
 
       {repos.data && repos.data.length > 0 && (
         <section className="mt-10">

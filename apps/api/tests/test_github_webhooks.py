@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -274,3 +275,36 @@ def test_unhandled_events_are_acknowledged(
     ready(client, world, fake_github)
     res = post_hook(client, "star", base(action="created"))
     assert res.status_code == 200 and res.json()["status"] == "ignored: event not handled"
+
+
+# ---------- housekeeping ----------
+
+
+def test_old_delivery_ids_are_pruned_and_recent_ones_kept(
+    client: TestClient,
+    world: World,
+    fake_github: FakeGitHub,
+    session_factory: sessionmaker[Session],
+) -> None:
+    ready(client, world, fake_github)
+    now = datetime.now(UTC)
+    with session_factory() as db:
+        db.add(WebhookDelivery(delivery_id="ancient", event="push", received_at=now - timedelta(days=30)))
+        db.add(WebhookDelivery(delivery_id="yesterday", event="push", received_at=now - timedelta(days=1)))
+        db.commit()
+
+    assert post_hook(client, "ping", {"zen": "x"}, delivery="fresh").status_code == 200
+
+    with session_factory() as db:
+        ids = set(db.scalars(select(WebhookDelivery.delivery_id)))
+    assert "ancient" not in ids
+    assert {"yesterday", "fresh"} <= ids
+
+
+def test_a_delivery_inside_the_retention_window_is_still_deduplicated(
+    client: TestClient, world: World, fake_github: FakeGitHub
+) -> None:
+    ready(client, world, fake_github)
+    payload = base(action="opened", pull_request=make_pr(5))
+    assert post_hook(client, "pull_request", payload, delivery="d-1").json()["status"] != "duplicate"
+    assert post_hook(client, "pull_request", payload, delivery="d-1").json()["status"] == "duplicate"

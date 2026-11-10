@@ -248,13 +248,14 @@ def close_vanished_open_items(
 
 
 def _soft[T](call: Callable[[], T], default: T) -> T:
-    """Run a GitHub call; treat 'empty repo', 'not found' and 'no permission' as no data."""
+    """Run a GitHub call; treat 'empty repo', 'not found', 'no permission' and 'issues
+    disabled' (410, common on forks) as no data instead of failing the whole repository."""
     try:
         return call()
     except GitHubRateLimited:
         raise
     except GitHubError as exc:
-        if exc.status in (403, 404, 409):
+        if exc.status in (403, 404, 409, 410):
             return default
         raise
 
@@ -279,16 +280,25 @@ def sync_repository(
     if prs_complete:
         close_vanished_open_items(db, PullRequest, repo.id, {int(p["number"]) for p in open_prs})
 
-    open_issues_raw, issues_complete = client.installation_paginate(
-        iid,
-        f"/repos/{full}/issues",
-        {"state": "open", "sort": "updated", "direction": "desc"},
-        max_pages=3,
+    # incomplete, so nothing is marked closed just because the listing was unavailable
+    no_listing: tuple[list[dict[str, Any]], bool] = ([], False)
+    listing = _soft(
+        lambda: client.installation_paginate(
+            iid,
+            f"/repos/{full}/issues",
+            {"state": "open", "sort": "updated", "direction": "desc"},
+            max_pages=3,
+        ),
+        no_listing,
     )
-    recent_closed_issues = client.installation_get(
-        iid,
-        f"/repos/{full}/issues",
-        {"state": "closed", "sort": "updated", "direction": "desc", "per_page": 50},
+    open_issues_raw, issues_complete = listing
+    recent_closed_issues: list[dict[str, Any]] = _soft(
+        lambda: client.installation_get(
+            iid,
+            f"/repos/{full}/issues",
+            {"state": "closed", "sort": "updated", "direction": "desc", "per_page": 50},
+        ),
+        [],
     )
     open_issues = [i for i in open_issues_raw if "pull_request" not in i]
     upsert_issues(db, repo.id, open_issues + recent_closed_issues)

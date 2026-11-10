@@ -14,6 +14,8 @@ from tests.github_helpers import (
     connect,
     make_commit,
     make_pr,
+    make_repo,
+    make_run,
 )
 
 API = "/api/v1"
@@ -200,3 +202,26 @@ def test_only_one_sync_can_hold_the_slot(
         db.execute(update(GithubInstallation).values(sync_started_at=stale))
         db.commit()
         assert begin_sync(db, pk) is True  # crashed worker's lock is taken over
+
+
+def test_repo_with_issues_disabled_still_syncs_everything_else(
+    client: TestClient, world: World, fake_github: FakeGitHub
+) -> None:
+    """Forks usually have Issues turned off, so GitHub answers 410. That must not throw away
+    the pull requests, commits and CI runs that did load."""
+    fake_github.add_installation()
+    fake_github.add_repo(
+        INSTALLATION_ID,
+        make_repo(201, "octo-org/fork"),
+        pulls_open=[make_pr(1)],
+        commits=[make_commit("d" * 40, "Initial")],
+        runs=[make_run(1)],
+        issues_disabled=True,
+    )
+    connected(client, world, fake_github)
+
+    fork = repos(client, world)["octo-org/fork"]
+    assert fork["open_pull_requests"] == 1
+    assert fork["open_issues"] == 0
+    assert fork["ci"] == "passing"
+    assert installation(client, world)["sync_error"] is None

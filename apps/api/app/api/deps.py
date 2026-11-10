@@ -15,6 +15,9 @@ from app.core.security import AuthError, AuthUnavailable, TokenVerifier, get_tok
 from app.db.models import Membership, Organization, User
 from app.db.session import get_db, get_session_factory
 from app.services.github.client import GitHubClient
+from app.services.llm.errors import LLMNotConfigured
+from app.services.llm.factory import get_llm_service
+from app.services.llm.service import LLMService
 from app.services.users import sync_user
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -91,3 +94,11 @@ def get_github_client() -> GitHubClient:
 
 def get_session_factory_dep() -> sessionmaker[Session]:
     return get_session_factory()
+
+
+def get_llm() -> LLMService:
+    """The configured AI service, or a 503 naming the settings that are still missing."""
+    try:
+        return get_llm_service()
+    except LLMNotConfigured as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc

@@ -15,10 +15,13 @@ dependencies = [
   "pgvector>=0.3,<1.0",
   "pyjwt[crypto]>=2.9,<3.0",
   "httpx>=0.27,<1.0",
+  "google-genai>=3.0,<4.0",
+  "anthropic>=2.7,<3.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "httpx2>=2.16,<3.0",  # what starlette.testclient uses
   "pytest>=8.0,<9.0",
   "ruff>=0.6,<1.0",
   "mypy>=1.11,<2.0",

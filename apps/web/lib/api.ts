@@ -153,3 +153,36 @@ export const orgApi = {
       body: JSON.stringify(body),
     }),
 };
+
+// ---------- AI ----------
+
+export interface AiStatus {
+  configured: boolean;
+  provider: string | null;
+  model: string | null;
+  embeddings_configured: boolean;
+  missing: string[]; // names of unset server settings; only filled in for admins
+  usage: {
+    days: number;
+    requests: number;
+    errors: number;
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
+export interface AiTestResult {
+  ok: boolean;
+  provider: string;
+  model: string;
+  latency_ms: number;
+  input_tokens: number;
+  output_tokens: number;
+  reply: string;
+}
+
+export const aiApi = {
+  status: (token: string, orgId: string) => authed<AiStatus>(`/orgs/${orgId}/ai`, token),
+  test: (token: string, orgId: string) =>
+    authed<AiTestResult>(`/orgs/${orgId}/ai/test`, token, { method: "POST" }),
+};

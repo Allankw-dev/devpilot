@@ -162,3 +162,33 @@ class OverviewOut(BaseModel):
     open_issues: int
     ci: CiSummary
     recent_commits: list[CommitOut]
+
+
+# ---------- AI ----------
+
+
+class AiUsageOut(BaseModel):
+    days: int
+    requests: int
+    errors: int
+    input_tokens: int
+    output_tokens: int
+
+
+class AiStatusOut(BaseModel):
+    configured: bool
+    provider: str | None
+    model: str | None
+    embeddings_configured: bool
+    missing: list[str]  # names of unset settings; only shown to admins
+    usage: AiUsageOut
+
+
+class AiTestOut(BaseModel):
+    ok: bool
+    provider: str
+    model: str
+    latency_ms: int
+    input_tokens: int
+    output_tokens: int
+    reply: str

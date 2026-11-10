@@ -24,6 +24,9 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | pgvector (client) | 0.5.1 |
 | PyJWT / cryptography | 2.15.1 / 50.0.2 |
 | httpx (GitHub client) | 0.28.1 |
+| google-genai (Gemini) | 3.0.0 |
+| anthropic (optional provider) | 2.7.0 |
+| httpx2 (dev: starlette TestClient) | 2.16.0 |
 | ruff / mypy / pytest | 0.17.4 / 1.20.2 / 8.4.2 |
 
 ## Web (apps/web)
@@ -39,7 +42,11 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | eslint | 8.57 |
 
 Tailwind is on v3 because shadcn/ui's config and plugins are most stable there.
-Celery, Gemini SDK and pgvector columns arrive in later phases.
+Celery and pgvector columns arrive with the indexing phase.
+
+Model names are never pinned in code (see `docs/AI.md`). `google-genai` and `anthropic` pull in
+`httpx2`, which makes `starlette.testclient` use it instead of `httpx`, so the tests import
+`httpx2` types for TestClient responses.
 
 GitHub REST API version is pinned to `2022-11-28` (setting `GITHUB_API_VERSION`).
 GitHub released `2026-03-10` with breaking changes; upgrade deliberately, not by accident.

@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import httpx
+import httpx2
 import jwt
 from fastapi.testclient import TestClient
 from httpx import Response
@@ -255,6 +256,8 @@ class FakeGitHub:
             if kind == "pulls":
                 return Response(200, json=page(d[f"pulls_{state}"]))
             if kind == "issues":
+                if d.get("issues_disabled"):  # GitHub answers 410 Gone, e.g. on forks
+                    return Response(410, json={"message": "Issues are disabled for this repo"})
                 return Response(200, json=page(d[f"issues_{state}"]))
             if kind == "commits":
                 if d.get("empty"):
@@ -307,13 +310,13 @@ def connect(
     installation_id: int = INSTALLATION_ID,
     with_state: bool = True,
     accessible: set[int] | None = None,
-) -> Response:
+) -> httpx2.Response:
     state = start_connect(client, headers, org_id)
     fake.codes[code] = {installation_id} if accessible is None else accessible
     body: dict[str, Any] = {"code": code, "installation_id": installation_id}
     if with_state:
         body["state"] = state
-    res: Response = client.post("/api/v1/github/installations/claim", json=body, headers=headers)
+    res: httpx2.Response = client.post("/api/v1/github/installations/claim", json=body, headers=headers)
     return res
 
 
@@ -327,7 +330,7 @@ def post_hook(
     signature: str | None = None,
     raw: bytes | None = None,
     headers: dict[str, str] | None = None,
-) -> Response:
+) -> httpx2.Response:
     import hashlib
     import hmac
     import uuid
@@ -341,7 +344,7 @@ def post_hook(
         "Content-Type": "application/json",
     }
     h.update(headers or {})
-    res: Response = client.post("/api/v1/webhooks/github", content=body, headers=h)
+    res: httpx2.Response = client.post("/api/v1/webhooks/github", content=body, headers=h)
     return res
 
 
