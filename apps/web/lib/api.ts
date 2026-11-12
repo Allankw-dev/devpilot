@@ -213,6 +213,7 @@ export interface SearchHit {
   language: string | null;
   score: number;
   content: string;
+  also_in: string[]; // other files holding exactly this code
 }
 
 export const codeApi = {

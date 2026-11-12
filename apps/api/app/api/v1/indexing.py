@@ -28,6 +28,8 @@ router = APIRouter(tags=["indexing"])
 
 Config = Annotated[Settings, Depends(get_settings)]
 SNIPPET_CHARS = 2000
+OVERFETCH = 4  # candidates per wanted result, so removing copies still leaves enough
+MAX_ALSO_IN = 5
 
 
 def index_out(row: RepositoryIndex | None) -> IndexOut:
@@ -165,24 +167,34 @@ def search_code(
         .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
         .where(GithubInstallation.org_id == ctx.org.id)  # never leaves the caller's organization
         .order_by(distance)
-        .limit(body.limit)
+        .limit(min(body.limit * OVERFETCH, 100))
     )
     if body.repository_id is not None:
         stmt = stmt.where(CodeChunk.repo_id == body.repository_id)
 
-    return SearchOut(
-        results=[
-            SearchHit(
-                repository_id=chunk.repo_id,
-                repository=full_name,
-                path=chunk.path,
-                start_line=chunk.start_line,
-                end_line=chunk.end_line,
-                symbol=chunk.symbol,
-                language=chunk.language,
-                score=round(1.0 - float(dist), 4),
-                content=chunk.content[:SNIPPET_CHARS],
-            )
-            for chunk, full_name, dist in db.execute(stmt).all()
-        ]
-    )
+    hits: list[SearchHit] = []
+    by_content: dict[str, SearchHit] = {}
+    for chunk, full_name, dist in db.execute(stmt).all():
+        first = by_content.get(chunk.content)
+        if first is not None:  # the same code again: note where, don't repeat it
+            where = chunk.path if first.repository == full_name else f"{full_name}: {chunk.path}"
+            if len(first.also_in) < MAX_ALSO_IN and where not in first.also_in:
+                first.also_in.append(where)
+            continue
+        if len(hits) >= body.limit:
+            continue  # keep scanning only to credit copies of hits we already have
+        hit = SearchHit(
+            repository_id=chunk.repo_id,
+            repository=full_name,
+            path=chunk.path,
+            start_line=chunk.start_line,
+            end_line=chunk.end_line,
+            symbol=chunk.symbol,
+            language=chunk.language,
+            score=round(1.0 - float(dist), 4),
+            content=chunk.content[:SNIPPET_CHARS],
+            also_in=[],
+        )
+        by_content[chunk.content] = hit
+        hits.append(hit)
+    return SearchOut(results=hits)

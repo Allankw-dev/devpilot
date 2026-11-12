@@ -103,6 +103,15 @@ export function CodeSearch({ orgId, repos }: { orgId: string; repos: Repo[] }) {
                   </span>
                   <span className="text-xs text-muted-foreground">match {Math.round(hit.score * 100)}%</span>
                 </div>
+                {hit.also_in.length > 0 && (
+                  <p
+                    className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground"
+                    title={hit.also_in.join("\n")}
+                  >
+                    Same code also in {hit.also_in.length} other{" "}
+                    {hit.also_in.length === 1 ? "file" : "files"}: {hit.also_in.join(", ")}
+                  </p>
+                )}
                 <pre className="overflow-x-auto px-3 py-2 text-xs leading-relaxed">
                   <code>{preview}</code>
                   {lines.length > PREVIEW_LINES && (

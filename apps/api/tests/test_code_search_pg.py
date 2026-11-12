@@ -172,3 +172,43 @@ def test_search_still_works_if_a_pgvector_setting_is_unknown(
     )
     res = search(env, query="stripe invoice refund")
     assert res.status_code == 200 and res.json()["results"]
+
+
+# ---------- copies of the same code ----------
+
+
+def test_identical_code_in_several_files_is_shown_once_with_the_other_places_listed(
+    env: IndexEnv,
+) -> None:
+    env.files["auth/login_copy.py"] = AUTH_PY  # an exact copy, like "Bank program.py" twice
+    env.files["old/login_backup.py"] = AUTH_PY
+    env.set_head("b")
+    assert env.run() == "ready"
+
+    hits = search(env, query="authenticate user credentials session token").json()["results"]
+    paths = [h["path"] for h in hits]
+    assert sum(AUTH_PY.rstrip("\n") == h["content"] for h in hits) == 1  # one hit for that code
+    top = hits[0]
+    assert top["path"] in {"auth/login.py", "auth/login_copy.py", "old/login_backup.py"}
+    assert sorted([top["path"], *top["also_in"]]) == [
+        "auth/login.py", "auth/login_copy.py", "old/login_backup.py",
+    ]  # fmt: skip
+    assert len(paths) == len(set(paths))
+
+
+def test_copies_do_not_use_up_the_requested_number_of_results(env: IndexEnv) -> None:
+    for i in range(4):
+        env.files[f"copies/login_{i}.py"] = AUTH_PY
+    env.set_head("c")
+    assert env.run() == "ready"
+
+    hits = search(env, query="authenticate user credentials session token", limit=2).json()[
+        "results"
+    ]
+    assert len(hits) == 2  # two different pieces of code, not one repeated
+    assert hits[0]["content"] != hits[1]["content"]
+
+
+def test_unique_code_has_no_also_in(env: IndexEnv) -> None:
+    hits = search(env, query="stripe invoice refund").json()["results"]
+    assert all(h["also_in"] == [] for h in hits)

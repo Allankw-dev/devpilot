@@ -229,6 +229,7 @@ class SearchHit(BaseModel):
     language: str | None
     score: float  # cosine similarity, higher is closer
     content: str
+    also_in: list[str] = []  # other files holding exactly this code (copies, forks)
 
 
 class SearchOut(BaseModel):
