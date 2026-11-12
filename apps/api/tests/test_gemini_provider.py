@@ -233,23 +233,88 @@ def embedding_response(*vectors: list[float]) -> types.EmbedContentResponse:
     )
 
 
-def test_embeddings_use_the_right_task_and_are_normalised_when_shortened() -> None:
+def sent_texts(models: FakeModels, call: int = 0) -> list[str]:
+    """The text of every input that was sent, one entry per separate input."""
+    contents = models.calls[call]["contents"]
+    assert all(isinstance(c, types.Content) for c in contents), "each text must be its own input"
+    return ["".join(p.text or "" for p in (c.parts or [])) for c in contents]
+
+
+def test_legacy_embedding_models_use_task_type_and_are_normalised_when_shortened() -> None:
     p, models = provider(
-        embedding_response([3.0, 4.0], [0.0, 2.0]), embedding_model="emb-model", embedding_dimensions=2
+        embedding_response([3.0, 4.0], [0.0, 2.0]),
+        embedding_model="gemini-embedding-001",
+        embedding_dimensions=2,
     )
     out = p.embed(["a", "b"], task="query", timeout=5)
 
     cfg = models.calls[0]["config"]
-    assert models.calls[0]["model"] == "emb-model"
+    assert models.calls[0]["model"] == "gemini-embedding-001"
     assert cfg.task_type == "RETRIEVAL_QUERY" and cfg.output_dimensionality == 2
+    assert sent_texts(models) == ["a", "b"]  # text is left as it is
     assert out.vectors[0] == pytest.approx([0.6, 0.8])
     assert all(math.isclose(math.sqrt(sum(x * x for x in v)), 1.0) for v in out.vectors)
 
 
-def test_document_embeddings_use_the_document_task() -> None:
-    p, models = provider(embedding_response([1.0]), embedding_model="emb", embedding_dimensions=1)
+def test_legacy_document_task() -> None:
+    p, models = provider(
+        embedding_response([1.0]), embedding_model="gemini-embedding-001", embedding_dimensions=1
+    )
     p.embed(["a"], task="document", timeout=5)
     assert models.calls[0]["config"].task_type == "RETRIEVAL_DOCUMENT"
+
+
+def test_embedding_2_has_no_task_type_and_puts_the_task_in_the_text() -> None:
+    p, models = provider(
+        embedding_response([1.0], [1.0]), embedding_model="gemini-embedding-2", embedding_dimensions=1
+    )
+    p.embed(["def a(): ...", "def b(): ..."], task="document", timeout=5)
+    assert models.calls[0]["config"].task_type is None
+    assert sent_texts(models) == [
+        "title: none | text: def a(): ...",
+        "title: none | text: def b(): ...",
+    ]
+
+    p2, models2 = provider(embedding_response([1.0]), embedding_model="gemini-embedding-2", embedding_dimensions=1)
+    p2.embed(["where is login handled"], task="query", timeout=5)
+    assert sent_texts(models2) == ["task: code retrieval | query: where is login handled"]
+
+
+def test_braces_in_code_are_not_treated_as_format_fields() -> None:
+    p, models = provider(
+        embedding_response([1.0]), embedding_model="gemini-embedding-2", embedding_dimensions=1
+    )
+    p.embed(["const x = {a: 1}; print('{text}')"], task="document", timeout=5)
+    assert sent_texts(models) == ["title: none | text: const x = {a: 1}; print('{text}')"]
+
+
+class MergingModels(FakeModels):
+    """Behaves like gemini-embedding-2: everything inside ONE input becomes ONE vector, and a
+    flat list of strings is one input. Only separate Content objects give separate vectors."""
+
+    def embed_content(self, **kwargs: Any) -> Any:
+        self.calls.append(kwargs)
+        contents = kwargs["contents"]
+        separate = all(
+            isinstance(c, types.Content) and len(c.parts or []) == 1 for c in contents
+        )
+        count = len(contents) if separate else 1
+        return embedding_response(*[[1.0, 0.0]] * count)
+
+
+def test_every_text_gets_its_own_vector_even_though_the_model_merges_multi_part_inputs() -> None:
+    """The bug that made indexing fail with 'invalid_output': 25 chunks in, 1 vector out."""
+    client = FakeClient()
+    client.models = MergingModels()
+    p = GeminiProvider(
+        api_key="k",
+        model="m",
+        client=client,
+        embedding_model="gemini-embedding-2",
+        embedding_dimensions=2,
+    )
+    out = p.embed([f"chunk {i}" for i in range(25)], task="document", timeout=5)
+    assert len(out.vectors) == 25
 
 
 def test_embedding_without_a_model_is_a_configuration_error() -> None:

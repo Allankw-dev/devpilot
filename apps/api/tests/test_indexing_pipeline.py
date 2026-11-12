@@ -373,6 +373,20 @@ def test_wrong_vector_size_is_caught_and_nothing_is_stored(env: IndexEnv) -> Non
     assert env.chunks() == []
 
 
+def test_a_provider_returning_too_few_vectors_is_explained_to_the_user(env: IndexEnv) -> None:
+    class Merging(FakeEmbedder):
+        def embed(self, texts, **kw):  # type: ignore[no-untyped-def]
+            result = super().embed(texts, **kw)
+            result.vectors[:] = result.vectors[:1]  # one vector for many texts
+            return result
+
+    llm = LLMService(FakeProvider(), embedding=Merging(), sleep=lambda _: None)
+    assert env.run(llm=llm) == "failed"
+    error = env.index().error or ""
+    assert "unusable data" in error and "received 1" in error
+    assert env.chunks() == []
+
+
 def test_embedding_dimensions_setting_must_match_the_database(
     env: IndexEnv, gh_settings: Settings
 ) -> None:

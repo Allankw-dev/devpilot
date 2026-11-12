@@ -210,7 +210,9 @@ def classify(exc: Exception) -> TransientIndexError | IndexFailed | None:
         return IndexFailed("Embeddings are not configured. Set GEMINI_EMBEDDING_MODEL.")
     if isinstance(exc, LLMAuthError):
         return IndexFailed("The AI provider rejected the API key, or the key can't use the model.")
-    if isinstance(exc, LLMBadRequest | LLMBlocked | LLMInvalidOutput):
+    if isinstance(exc, LLMInvalidOutput):  # our own message, safe to show
+        return IndexFailed(f"The embedding model returned unusable data: {exc}")
+    if isinstance(exc, LLMBadRequest | LLMBlocked):
         return IndexFailed(
             f"The embedding request was rejected ({exc.code}). Check GEMINI_EMBEDDING_MODEL."
         )

@@ -229,7 +229,7 @@ def test_embedding_count_mismatch_is_an_error() -> None:
     emb = FakeProvider()
     emb.embed_count_off_by = 1
     h = Harness(FakeProvider(), embedding=emb)
-    with pytest.raises(LLMInvalidOutput):
+    with pytest.raises(LLMInvalidOutput, match="asked for 2 embeddings but received 1"):
         h.service.embed(["a", "b"], "query", CTX)
 
 

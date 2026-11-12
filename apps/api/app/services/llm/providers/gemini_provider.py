@@ -43,6 +43,20 @@ _BLOCKED = {
     "IMAGE_PROHIBITED_CONTENT",
 }
 _TASK = {"document": "RETRIEVAL_DOCUMENT", "query": "RETRIEVAL_QUERY"}
+
+# gemini-embedding-2 and newer take no task_type: the task goes into the text instead
+# (see https://ai.google.dev/gemini-api/docs/embeddings). The code-retrieval query form fits a
+# natural-language question searched against source code.
+_PREFIXED = {
+    "document": "title: none | text: {text}",
+    "query": "task: code retrieval | query: {text}",
+}
+
+
+def _uses_task_type(model: str) -> bool:
+    """Only the original embedding models take task_type; newer ones want a text prefix."""
+    name = model.removeprefix("models/")
+    return "embedding-001" in name or name.startswith("text-embedding")
 _MODE = {"auto": "AUTO", "none": "NONE", "required": "ANY"}
 
 
@@ -192,14 +206,21 @@ class GeminiProvider(LLMProvider):
     ) -> EmbeddingResult:
         if not self._embedding_model:
             raise LLMBadRequest("No Gemini embedding model is configured")
+        legacy = _uses_task_type(self._embedding_model)
         config = types.EmbedContentConfig(
-            task_type=_TASK[task],
+            task_type=_TASK[task] if legacy else None,
             output_dimensionality=self._dims,
             http_options=types.HttpOptions(timeout=int(timeout * 1000)),
         )
+        # One Content per text. A flat list of strings would be merged into ONE vector by
+        # gemini-embedding-2 (it embeds all parts of a single input together).
+        contents = [
+            types.Content(parts=[types.Part(text=t if legacy else _PREFIXED[task].format(text=t))])
+            for t in texts
+        ]
         try:
             response = self._client.models.embed_content(
-                model=self._embedding_model, contents=list(texts), config=config
+                model=self._embedding_model, contents=contents, config=config
             )
         except Exception as exc:
             raise translate_error(exc) from exc

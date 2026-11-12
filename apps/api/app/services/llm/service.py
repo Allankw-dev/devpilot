@@ -218,7 +218,9 @@ class LLMService:
 
                 part = self._with_retries(tally, embed_batch)
                 if len(part.vectors) != len(batch):
-                    raise LLMInvalidOutput("The provider returned the wrong number of embeddings")
+                    raise LLMInvalidOutput(
+                        f"asked for {len(batch)} embeddings but received {len(part.vectors)}"
+                    )
                 vectors.extend(part.vectors)
                 usage += part.usage
                 model = part.model

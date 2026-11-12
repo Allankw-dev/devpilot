@@ -97,6 +97,18 @@ that starts a new piece at an unindented line after a blank line. Small neighbou
 and large pieces are cut with a little overlap. Line numbers are exact, so results can link to
 `path#L10-L42`. Parser-based splitting for more languages (tree-sitter) is a possible upgrade.
 
+## Which embedding model
+
+`gemini-embedding-001` and `gemini-embedding-2` both work, but they are called differently and
+DevPilot handles that for you:
+
+- Every chunk is sent as its own input. (`gemini-embedding-2` merges everything in one input into a
+  single vector, so a batch sent as one list gets one vector back: that gives the error
+  "asked for N embeddings but received 1".)
+- `gemini-embedding-001` is told the task with `task_type`. `gemini-embedding-2` takes no `task_type`;
+  the task goes into the text (`title: none | text: ...` for code, `task: code retrieval | query: ...`
+  for questions).
+
 ## Changing the embedding model
 
 Vectors from different models can not be compared. If you change `GEMINI_EMBEDDING_MODEL`, click
