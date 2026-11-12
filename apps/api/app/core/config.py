@@ -22,6 +22,21 @@ class Settings(BaseSettings):
     # NoDecode: accept plain "a,b" or a JSON list from env instead of forcing JSON
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
+    # Background jobs. "celery" needs a worker process (docs/INDEXING.md). "inline" runs jobs
+    # inside the API process after the response: handy for a quick start and for tests, but
+    # jobs are lost if the API restarts.
+    job_backend: Literal["celery", "inline"] = "celery"
+
+    # Code indexing (docs/INDEXING.md). The limits exist to cap embedding cost and memory.
+    index_max_file_bytes: int = 200_000
+    index_max_files: int = 3000
+    index_max_chunks: int = 20_000
+    index_max_archive_mb: int = 150
+    index_max_runtime_seconds: int = 1800
+    # Extra patterns to leave out of the index, on top of the built-in ones. Comma separated,
+    # e.g. "docs/generated/*,*.snap". A bare name (no * or /) excludes any folder or file so named.
+    index_exclude: Annotated[list[str], NoDecode] = []
+
     database_url: str = "postgresql+psycopg://devpilot:devpilot@localhost:5432/devpilot"
     redis_url: str = "redis://localhost:6379/0"
 
@@ -138,7 +153,7 @@ class Settings(BaseSettings):
         issuer = self.supabase_issuer
         return f"{issuer}/.well-known/jwks.json" if issuer else None
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", "index_exclude", mode="before")
     @classmethod
     def split_origins(cls, v: object) -> object:
         if isinstance(v, str):

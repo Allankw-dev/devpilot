@@ -101,6 +101,19 @@ export interface GithubStatus {
 
 export type CiState = "passing" | "failing" | "running" | "other" | "none";
 
+export type IndexStatus = "none" | "queued" | "running" | "ready" | "failed";
+
+export interface RepoIndex {
+  status: IndexStatus;
+  files: number;
+  chunks: number;
+  skipped_files: number;
+  skipped_chunks: number; // dropped because they looked like credentials
+  indexed_at: string | null;
+  queued_at: string | null;
+  error: string | null;
+}
+
 export interface Repo {
   id: string;
   full_name: string;
@@ -114,6 +127,7 @@ export interface Repo {
   open_issues: number;
   last_commit_at: string | null;
   ci: CiState;
+  index: RepoIndex;
 }
 
 export interface Overview {
@@ -185,4 +199,28 @@ export const aiApi = {
   status: (token: string, orgId: string) => authed<AiStatus>(`/orgs/${orgId}/ai`, token),
   test: (token: string, orgId: string) =>
     authed<AiTestResult>(`/orgs/${orgId}/ai/test`, token, { method: "POST" }),
+};
+
+// ---------- code index and search ----------
+
+export interface SearchHit {
+  repository_id: string;
+  repository: string;
+  path: string;
+  start_line: number;
+  end_line: number;
+  symbol: string | null;
+  language: string | null;
+  score: number;
+  content: string;
+}
+
+export const codeApi = {
+  startIndex: (token: string, orgId: string, repoId: string) =>
+    authed<RepoIndex>(`/orgs/${orgId}/repos/${repoId}/index`, token, { method: "POST" }),
+  search: (token: string, orgId: string, body: { query: string; repository_id?: string }) =>
+    authed<{ results: SearchHit[] }>(`/orgs/${orgId}/search`, token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

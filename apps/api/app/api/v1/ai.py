@@ -3,21 +3,17 @@ import time
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import case, func, select
 
 from app.api.deps import AdminCtx, AnyMember, DbSession, get_llm
+from app.api.llm_http import llm_http_error
 from app.core.config import Settings, get_settings
 from app.core.roles import Role, at_least
 from app.db.models import LlmUsage
 from app.schemas import AiStatusOut, AiTestOut, AiUsageOut
 from app.services.llm import CallContext, GenerationRequest, LLMService, Message
-from app.services.llm.errors import (
-    LLMAuthError,
-    LLMError,
-    LLMRateLimited,
-    LLMTimeout,
-)
+from app.services.llm.errors import LLMError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ai"])
@@ -70,22 +66,9 @@ def ai_test(ctx: AdminCtx, llm: Annotated[LLMService, Depends(get_llm)]) -> AiTe
             ),
             CallContext(feature="ai_test", org_id=ctx.org.id, user_id=ctx.user.id),
         )
-    except LLMAuthError as exc:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "The AI provider rejected the API key, or the key can't use the configured model.",
-        ) from exc
-    except LLMRateLimited as exc:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "The AI provider is rate limiting us"
-        ) from exc
-    except LLMTimeout as exc:
-        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "The AI provider timed out") from exc
     except LLMError as exc:
         logger.warning("AI test failed: %s", exc.code)
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, f"The AI provider call failed ({exc.code})"
-        ) from exc
+        raise llm_http_error(exc) from exc
 
     return AiTestOut(
         ok=True,

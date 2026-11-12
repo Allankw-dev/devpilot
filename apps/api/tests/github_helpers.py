@@ -1,7 +1,9 @@
 """A fake GitHub (REST + OAuth) served through httpx.MockTransport, plus data builders."""
 
+import io
 import json
 import re
+import tarfile
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -24,6 +26,29 @@ def iso(dt: datetime) -> str:
 
 
 # ---------- builders ----------
+
+
+def make_tarball(
+    files: dict[str, str | bytes],
+    *,
+    prefix: str = "octo-org-repo-abc1234",
+    extra: Callable[[tarfile.TarFile], None] | None = None,
+) -> bytes:
+    """A .tar.gz shaped like GitHub's repository snapshots: everything under one top folder."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        top = tarfile.TarInfo(prefix)
+        top.type = tarfile.DIRTYPE
+        tar.addfile(top)
+        for name, content in files.items():
+            data = content.encode() if isinstance(content, str) else content
+            info = tarfile.TarInfo(f"{prefix}/{name}")
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+        if extra:
+            extra(tar)
+    return buf.getvalue()
+
 
 
 def make_repo(
@@ -147,6 +172,7 @@ class FakeGitHub:
         self.calls: list[str] = []
         self.token_requests = 0
         self.fail: dict[str, tuple[int, dict[str, str]]] = {}
+        self.codeload_auth: list[str | None] = []  # Authorization header seen by the download host
 
     # -- setup helpers --
     def add_installation(
@@ -175,10 +201,26 @@ class FakeGitHub:
             **data,
         }
 
+    def _archive(self, full: str) -> bytes:
+        d = self.data[full]
+        if "archive" in d:  # tests can hand over any bytes, e.g. a hostile archive
+            return bytes(d["archive"])
+        head = str(d.get("head_sha", "a" * 40))
+        return make_tarball(d.get("files", {}), prefix=f"{full.replace('/', '-')}-{head[:7]}")
+
     # -- the handler --
     def handler(self, request: httpx.Request) -> Response:
         path, method = request.url.path, request.method
         self.calls.append(f"{method} {path}")
+        if request.url.host == "codeload.github.com":  # where tarball redirects end up
+            self.codeload_auth.append(request.headers.get("authorization"))
+            owner_repo = "/".join(path.strip("/").split("/")[:2])
+            # A real stream, like a network response, so the client's streaming path is exercised.
+            return Response(
+                200,
+                stream=httpx.ByteStream(self._archive(owner_repo)),
+                headers={"content-type": "application/x-gzip"},
+            )
         for needle, (status, headers) in self.fail.items():
             if needle in path:
                 return Response(status, headers=headers, json={"message": "failure injected"})
@@ -245,6 +287,24 @@ class FakeGitHub:
         if path == "/installation/repositories":
             repos = self.repos.get(iid, [])
             return Response(200, json={"total_count": len(repos), "repositories": page(repos)})
+
+        cm = re.fullmatch(r"/repos/([^/]+/[^/]+)/commits/([^/]+)", path)
+        if cm:
+            full = cm.group(1)
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            if self.data[full].get("empty"):
+                return Response(409, json={"message": "Git Repository is empty."})
+            return Response(200, json={"sha": self.data[full].get("head_sha", "a" * 40)})
+
+        am = re.fullmatch(r"/repos/([^/]+/[^/]+)/tarball/([^/]+)", path)
+        if am:
+            full, ref = am.groups()
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            return Response(
+                302, headers={"location": f"https://codeload.github.com/{full}/legacy.tar.gz/{ref}"}
+            )
 
         rm = re.fullmatch(r"/repos/([^/]+/[^/]+)/(pulls|issues|commits|actions/runs)", path)
         if rm:

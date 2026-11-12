@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { AiPanel } from "@/components/ai-panel";
-import { ApiError, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
+import { CodeSearch } from "@/components/code-search";
+import { IndexCell } from "@/components/index-cell";
+import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
+import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
 import { cn } from "@/lib/utils";
 
@@ -16,15 +19,6 @@ const CI_LABEL: Record<CiState, { text: string; cls: string }> = {
   other: { text: "Other", cls: "text-muted-foreground" },
   none: { text: "No runs", cls: "text-muted-foreground" },
 };
-
-function ago(iso: string | null): string {
-  if (!iso) return "never";
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)} h ago`;
-  return new Date(iso).toLocaleDateString();
-}
 
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -60,7 +54,15 @@ export function OrgView() {
   const repos = useQuery({
     queryKey: ["org", orgId, "repos"],
     queryFn: async () => orgApi.repos(await accessToken(), orgId),
-    refetchInterval: syncing ? 3000 : false,
+    // poll while a sync or an index run is in progress so the status updates by itself
+    refetchInterval: (q) =>
+      syncing || q.state.data?.some((r) => r.index.status === "queued" || r.index.status === "running")
+        ? 3000
+        : false,
+  });
+  const startIndex = useMutation({
+    mutationFn: async (repoId: string) => codeApi.startIndex(await accessToken(), orgId, repoId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["org", orgId, "repos"] }),
   });
 
   const connect = useMutation({
@@ -93,6 +95,7 @@ export function OrgView() {
   }
 
   const isAdmin = org.data?.role === "admin" || org.data?.role === "owner";
+  const canIndex = isAdmin || org.data?.role === "member";
   const gh = github.data;
   const mutationError = [connect, sync, disconnect].find((m) => m.isError)?.error;
 
@@ -228,7 +231,8 @@ export function OrgView() {
                   <th className="py-2 pr-4 font-medium">CI</th>
                   <th className="py-2 pr-4 text-right font-medium">PRs</th>
                   <th className="py-2 pr-4 text-right font-medium">Issues</th>
-                  <th className="py-2 font-medium">Last commit</th>
+                  <th className="py-2 pr-4 font-medium">Last commit</th>
+                  <th className="py-2 font-medium">Code index</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -253,14 +257,29 @@ export function OrgView() {
                     <td className={cn("py-2.5 pr-4", CI_LABEL[r.ci].cls)}>{CI_LABEL[r.ci].text}</td>
                     <td className="py-2.5 pr-4 text-right tabular-nums">{r.open_pull_requests}</td>
                     <td className="py-2.5 pr-4 text-right tabular-nums">{r.open_issues}</td>
-                    <td className="py-2.5 text-muted-foreground">{ago(r.last_commit_at)}</td>
+                    <td className="py-2.5 pr-4 text-muted-foreground">{ago(r.last_commit_at)}</td>
+                    <td className="py-2.5">
+                      <IndexCell
+                        repo={r}
+                        canIndex={canIndex}
+                        busy={startIndex.isPending && startIndex.variables === r.id}
+                        onStart={() => startIndex.mutate(r.id)}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {startIndex.isError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {startIndex.error instanceof Error ? startIndex.error.message : "Could not start indexing."}
+            </p>
+          )}
         </section>
       )}
+
+      {canIndex && repos.data && <CodeSearch orgId={orgId} repos={repos.data} />}
 
       {overview.data && overview.data.recent_commits.length > 0 && (
         <section className="mt-10">

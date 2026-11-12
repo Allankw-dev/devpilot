@@ -51,6 +51,11 @@ timeouts and 5xx (`LLM_MAX_ATTEMPTS`), and one `llm_usage` row per operation
   handlers read-only and bounded.
 - Nothing the model returns is ever executed or posted to GitHub without a human approving it.
 
+## Where embeddings are used
+
+Repository indexing and code search (`docs/INDEXING.md`) embed code with `GEMINI_EMBEDDING_MODEL`.
+Each embedding batch is recorded in `llm_usage` (feature `indexing` or `code_search`).
+
 ## Settings
 
 | Setting | Default | Meaning |

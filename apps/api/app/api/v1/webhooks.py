@@ -4,17 +4,16 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import get_github_client, get_session_factory_dep
+from app.api.deps import JobsDep, get_session_factory_dep
 from app.core.config import Settings, get_settings
 from app.db.models import WebhookDelivery
-from app.services.github.client import GitHubClient
-from app.services.github.sync import run_sync
+from app.jobs.dispatch import JobQueueUnavailable
 from app.services.github.webhooks import process_event, valid_signature
 
 logger = logging.getLogger(__name__)
@@ -49,10 +48,9 @@ def _apply(
 @router.post("/github")
 async def github_webhook(
     request: Request,
-    background: BackgroundTasks,
+    jobs: JobsDep,
     settings: Annotated[Settings, Depends(get_settings)],
     factory: Annotated[sessionmaker[Session], Depends(get_session_factory_dep)],
-    client: Annotated[GitHubClient, Depends(get_github_client)],
 ) -> dict[str, str]:
     secret = (
         settings.github_webhook_secret.get_secret_value() if settings.github_webhook_secret else ""
@@ -91,7 +89,11 @@ async def github_webhook(
         timedelta(days=settings.webhook_delivery_retention_days),
     )
     for installation_pk in scheduled:
-        background.add_task(run_sync, factory, client, installation_pk)
+        try:  # publishing may touch the network, so keep it off the event loop
+            await run_in_threadpool(jobs.sync_installation, installation_pk, claimed=False)
+        except JobQueueUnavailable:
+            # The event is already recorded; a missed sync is repaired by the next one.
+            logger.error("Could not queue a sync after webhook delivery %s", delivery)
 
     logger.info("github webhook event=%s delivery=%s outcome=%s", event, delivery, outcome)
     return {"status": outcome}

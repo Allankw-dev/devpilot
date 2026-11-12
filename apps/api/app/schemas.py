@@ -124,6 +124,19 @@ class ClaimRequest(BaseModel):
     state: str | None = Field(default=None, max_length=100)
 
 
+class IndexOut(BaseModel):
+    """Code-index state of one repository. status is none until it is first indexed."""
+
+    status: str  # none | queued | running | ready | failed
+    files: int
+    chunks: int
+    skipped_files: int
+    skipped_chunks: int  # dropped because they looked like credentials
+    indexed_at: datetime | None
+    queued_at: datetime | None
+    error: str | None
+
+
 class RepoOut(BaseModel):
     id: uuid.UUID
     full_name: str
@@ -137,6 +150,7 @@ class RepoOut(BaseModel):
     open_issues: int
     last_commit_at: datetime | None
     ci: str  # passing | failing | running | other | none
+    index: IndexOut
 
 
 class CommitOut(BaseModel):
@@ -192,3 +206,30 @@ class AiTestOut(BaseModel):
     input_tokens: int
     output_tokens: int
     reply: str
+
+
+# ---------- code search ----------
+
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    query: str = Field(min_length=1, max_length=500)
+    repository_id: uuid.UUID | None = None
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class SearchHit(BaseModel):
+    repository_id: uuid.UUID
+    repository: str
+    path: str
+    start_line: int
+    end_line: int
+    symbol: str | None
+    language: str | None
+    score: float  # cosine similarity, higher is closer
+    content: str
+
+
+class SearchOut(BaseModel):
+    results: list[SearchHit]

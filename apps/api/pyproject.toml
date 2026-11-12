@@ -17,10 +17,12 @@ dependencies = [
   "httpx>=0.27,<1.0",
   "google-genai>=3.0,<4.0",
   "anthropic>=2.7,<3.0",
+  "celery[redis]>=5.5,<6.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "celery-types>=0.26,<1.0",
   "httpx2>=2.16,<3.0",  # what starlette.testclient uses
   "pytest>=8.0,<9.0",
   "ruff>=0.6,<1.0",

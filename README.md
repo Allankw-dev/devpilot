@@ -45,6 +45,18 @@ Setup, including the webhook tunnel for local testing, is in [`docs/GITHUB.md`](
 Gemini through a provider abstraction (Anthropic optional). Needs an API key and model names in
 `.env`; see [`docs/AI.md`](docs/AI.md). Verify with **Test AI connection** on an organization page.
 
+## Background jobs and code search
+
+GitHub syncs and repository indexing run on a Celery worker (Redis is the queue):
+
+```powershell
+cd apps/api
+celery -A app.jobs.celery_app worker --loglevel=info --pool=solo   # Windows
+```
+
+No worker yet? Set `JOB_BACKEND=inline` to run jobs inside the API. See
+[`docs/INDEXING.md`](docs/INDEXING.md) for indexing, limits, exclusions and troubleshooting.
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

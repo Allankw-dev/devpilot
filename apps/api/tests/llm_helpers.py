@@ -1,5 +1,8 @@
 """A scripted fake provider so the AI layer can be tested without any network or API key."""
 
+import math
+import re
+import zlib
 from collections.abc import Sequence
 from typing import Any
 
@@ -95,3 +98,39 @@ class Harness:
 
 def user_request(text: str = "hi", **kw: Any) -> GenerationRequest:
     return GenerationRequest(messages=[Message(role="user", content=text)], **kw)
+
+
+class FakeEmbedder(FakeProvider):
+    """Embeds text as a hashed bag of words, so texts that share words really are closer.
+    Deterministic, 768 dimensions (the database column size)."""
+
+    model = "fake-embed-v1"
+
+    def __init__(self, dims: int = 768) -> None:
+        super().__init__(dims=dims)
+        self.texts: list[str] = []  # everything ever sent for embedding
+        self.calls = 0
+        self.fail_with: Exception | None = None
+        self.fail_after = 0  # calls that succeed before fail_with starts raising
+        self.fail_first = 0  # alternatively: the first N calls raise, then it recovers
+
+    def embed(
+        self, texts: Sequence[str], *, task: EmbeddingTask, timeout: float
+    ) -> EmbeddingResult:
+        self.calls += 1
+        if self.fail_with is not None and (
+            self.calls <= self.fail_first or (not self.fail_first and self.calls > self.fail_after)
+        ):
+            raise self.fail_with
+        self.embed_batches.append(list(texts))
+        self.texts.extend(texts)
+        return EmbeddingResult(
+            vectors=[self.vector(t) for t in texts], usage=Usage(len(texts), 0), model=self.model
+        )
+
+    def vector(self, text: str) -> list[float]:
+        vec = [0.0] * self.dims
+        for token in re.findall(r"[a-z0-9_]+", text.lower()):
+            vec[zlib.crc32(token.encode()) % self.dims] += 1.0
+        norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+        return [x / norm for x in vec]

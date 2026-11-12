@@ -339,6 +339,21 @@ def begin_sync(db: Session, installation_pk: Any) -> bool:
     return result.rowcount == 1
 
 
+def release_sync(db: Session, installation_pk: Any, error: str) -> None:
+    """Undo begin_sync() when the job could not be queued, so the installation isn't left
+    looking busy until the stale-lock timeout."""
+    db.execute(
+        update(GithubInstallation)
+        .where(
+            GithubInstallation.id == installation_pk,
+            GithubInstallation.sync_status == "running",
+        )
+        .values(sync_status="failed", sync_error=error[:500])
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+
+
 def run_sync(
     factory: sessionmaker[Session],
     client: GitHubClient,

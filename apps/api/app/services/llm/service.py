@@ -106,6 +106,11 @@ class LLMService:
     def provider_name(self) -> str:
         return self._gen.name
 
+    @property
+    def embedding_model(self) -> str | None:
+        """Name of the model that makes embeddings, or None if embeddings aren't set up."""
+        return self._emb.model if self._emb else None
+
     # ---------- public API ----------
 
     def generate(self, request: GenerationRequest, ctx: CallContext) -> GenerationResult:

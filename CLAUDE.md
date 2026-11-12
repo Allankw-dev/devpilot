@@ -3,7 +3,7 @@
 Name is configurable via `PRODUCT_NAME` (API) and `NEXT_PUBLIC_PRODUCT_NAME` (web).
 Monorepo: `apps/web` (Next.js App Router, TS, Tailwind, shadcn/ui, TanStack Query, Zustand)
 and `apps/api` (FastAPI, Python 3.12, Pydantic v2, SQLAlchemy 2, Alembic).
-Postgres + pgvector, Redis, Celery (arrives with the indexing phase).
+Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worker --pool=solo` on Windows).
 
 ## Rules
 - No hardcoded model names, secrets or URLs. Config goes through pydantic-settings and `.env`.
@@ -17,8 +17,12 @@ Postgres + pgvector, Redis, Celery (arrives with the indexing phase).
 - Every feature ships with tests. Run ruff, mypy, pytest and web lint/typecheck/build before finishing.
 - Work in small phases. Don't build features outside the current phase.
 - Pin dependencies and record them in `docs/VERSIONS.md`.
+- Jobs must be safe to run twice (Celery re-delivers after a crash). Claim work atomically, save
+  progress in small commits, and never assume a job runs only once.
+- Indexed chunks hold repository content: always scope reads by organization, and never log chunk text.
 
 ## Commands
 - API: `cd apps/api && pytest && ruff check . && mypy .`
 - Web: `cd apps/web && npm run lint && npm run typecheck && npm run build`
 - Infra: `docker compose up -d`, then `cd apps/api && alembic upgrade head`
+- Worker: `cd apps/api && celery -A app.jobs.celery_app worker --loglevel=info --pool=solo`

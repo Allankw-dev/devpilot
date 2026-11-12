@@ -1,25 +1,25 @@
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
-from functools import partial
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from app.api.deps import (
     AdminCtx,
     AnyMember,
     CurrentUser,
     DbSession,
+    JobsDep,
     get_github_client,
-    get_session_factory_dep,
 )
 from app.core.config import Settings, get_settings
 from app.core.roles import Role, at_least
 from app.db.models import GithubConnectRequest, GithubInstallation, Membership
+from app.jobs.dispatch import JobQueueUnavailable
 from app.schemas import (
     ClaimRequest,
     GithubInstallationOut,
@@ -32,14 +32,13 @@ from app.services.github.client import (
     GitHubNotConfigured,
     GitHubRateLimited,
 )
-from app.services.github.sync import begin_sync, run_sync
+from app.services.github.sync import begin_sync, release_sync
 
 router = APIRouter(tags=["github"])
 
 CONNECT_LINK_LIFETIME = timedelta(minutes=30)
 
 Client = Annotated[GitHubClient, Depends(get_github_client)]
-Factory = Annotated[sessionmaker[Session], Depends(get_session_factory_dep)]
 Config = Annotated[Settings, Depends(get_settings)]
 
 
@@ -109,9 +108,8 @@ def claim_installation(
     user: CurrentUser,
     db: DbSession,
     client: Client,
-    factory: Factory,
     settings: Config,
-    background: BackgroundTasks,
+    jobs: JobsDep,
 ) -> GithubInstallationOut:
     """Finish the GitHub App install. GitHub redirects the browser here with an editable
     installation_id, so it is never trusted by itself: the user must prove, with GitHub's
@@ -191,7 +189,15 @@ def claim_installation(
 
     if begin_sync(db, installation.id):
         db.refresh(installation)
-        background.add_task(partial(run_sync, factory, client, installation.id, claimed=True))
+        reported = _out(installation)  # says "running", whatever the job does next
+        try:
+            jobs.sync_installation(installation.id, claimed=True)
+        except JobQueueUnavailable as exc:
+            # The connection itself succeeded, so keep it and say why the first sync didn't start.
+            release_sync(db, installation.id, str(exc))
+            db.refresh(installation)
+            return _out(installation)
+        return reported
     return _out(installation)
 
 
@@ -215,10 +221,8 @@ def trigger_sync(
     installation_pk: uuid.UUID,
     ctx: AdminCtx,
     db: DbSession,
-    client: Client,
-    factory: Factory,
     settings: Config,
-    background: BackgroundTasks,
+    jobs: JobsDep,
 ) -> GithubInstallationOut:
     _require_configured(settings)
     installation = _get_installation(db, ctx.org.id, installation_pk)
@@ -227,8 +231,13 @@ def trigger_sync(
     if not begin_sync(db, installation.id):
         raise HTTPException(status.HTTP_409_CONFLICT, "A sync is already running")
     db.refresh(installation)
-    background.add_task(partial(run_sync, factory, client, installation.id, claimed=True))
-    return _out(installation)
+    reported = _out(installation)
+    try:
+        jobs.sync_installation(installation.id, claimed=True)
+    except JobQueueUnavailable as exc:
+        release_sync(db, installation.id, str(exc))
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    return reported
 
 
 @router.delete(

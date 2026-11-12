@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -35,6 +35,9 @@ ISSUER = "https://test-project.supabase.co/auth/v1"
 AUDIENCE = "authenticated"
 
 
+ON_POSTGRES = os.environ.get("TEST_DATABASE_URL", "").startswith("postgresql")
+
+
 @pytest.fixture
 def engine() -> Iterator[Engine]:
     """SQLite in memory by default; set TEST_DATABASE_URL to run the suite on Postgres."""
@@ -50,6 +53,9 @@ def engine() -> Iterator[Engine]:
         def _fk_on(dbapi_conn: Any, _: Any) -> None:
             dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
+    if eng.dialect.name == "postgresql":  # the embedding column needs pgvector
+        with eng.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.drop_all(eng)
     Base.metadata.create_all(eng)
     yield eng
@@ -144,6 +150,7 @@ def gh_settings(private_pem: str) -> Settings:
         github_client_secret=SecretStr(CLIENT_SECRET),
         github_webhook_secret=SecretStr(WEBHOOK_SECRET),
         github_app_private_key=SecretStr(private_pem),
+        job_backend="inline",  # jobs run in-process; the Celery path has its own tests
     )
 
 

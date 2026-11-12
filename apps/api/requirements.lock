@@ -2,6 +2,8 @@
 #    uv pip compile pyproject.toml --extra dev --universal --python-version 3.12 -o requirements.lock
 alembic==1.20.1
     # via devpilot-api (pyproject.toml)
+amqp==5.4.2
+    # via kombu
 annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
@@ -16,6 +18,12 @@ anyio==4.16.0
     #   httpx2
     #   starlette
     #   watchfiles
+billiard==4.3.2
+    # via celery
+celery==5.7.0
+    # via devpilot-api (pyproject.toml)
+celery-types==0.26.0
+    # via devpilot-api (pyproject.toml)
 certifi==2026.10.23
     # via
     #   httpcore
@@ -26,7 +34,18 @@ cffi==2.1.1 ; platform_python_implementation != 'PyPy'
 charset-normalizer==3.5.2
     # via requests
 click==8.5.1
-    # via uvicorn
+    # via
+    #   celery
+    #   click-didyoumean
+    #   click-plugins
+    #   click-repl
+    #   uvicorn
+click-didyoumean==0.3.1
+    # via celery
+click-plugins==1.1.1.2
+    # via celery
+click-repl==0.4.1
+    # via celery
 colorama==0.4.6 ; sys_platform == 'win32'
     # via pytest
 cryptography==50.0.2
@@ -75,6 +94,8 @@ iniconfig==2.3.1
     # via pytest
 jiter==0.19.0
     # via anthropic
+kombu==5.7.0
+    # via celery
 librt==0.16.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 mako==1.4.3
@@ -90,13 +111,17 @@ opentelemetry-api==1.45.2
     #   anthropic
     #   fastapi
 packaging==26.3
-    # via pytest
+    # via
+    #   kombu
+    #   pytest
 pathspec==1.1.1
     # via mypy
 pgvector==0.5.1
     # via devpilot-api (pyproject.toml)
 pluggy==1.7.0
     # via pytest
+prompt-toolkit==3.0.53
+    # via click-repl
 psycopg==3.3.8
     # via devpilot-api (pyproject.toml)
 psycopg-binary==3.3.8 ; implementation_name != 'pypy'
@@ -124,6 +149,8 @@ pyjwt==2.15.1
     # via devpilot-api (pyproject.toml)
 pytest==8.4.2
     # via devpilot-api (pyproject.toml)
+python-dateutil==2.9.0.post0
+    # via celery
 python-dotenv==1.2.4
     # via
     #   pydantic-settings
@@ -131,13 +158,17 @@ python-dotenv==1.2.4
 pyyaml==6.0.3
     # via uvicorn
 redis==6.4.0
-    # via devpilot-api (pyproject.toml)
+    # via
+    #   devpilot-api (pyproject.toml)
+    #   kombu
 requests==2.34.2
     # via
     #   google-auth
     #   google-genai
 ruff==0.17.4
     # via devpilot-api (pyproject.toml)
+six==1.17.0
+    # via python-dateutil
 sniffio==1.3.1
     # via
     #   anthropic
@@ -159,6 +190,8 @@ typing-extensions==4.16.0
     #   alembic
     #   anthropic
     #   anyio
+    #   celery-types
+    #   click-repl
     #   fastapi
     #   google-genai
     #   httpx2
@@ -177,15 +210,27 @@ typing-inspection==0.4.5
     #   pydantic
     #   pydantic-settings
 tzdata==2026.6 ; sys_platform == 'win32'
-    # via psycopg
+    # via
+    #   kombu
+    #   psycopg
+    #   tzlocal
+tzlocal==5.4.5
+    # via celery
 urllib3==2.8.0
     # via requests
 uvicorn==0.54.0
     # via devpilot-api (pyproject.toml)
 uvloop==0.23.0 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
+vine==5.1.0
+    # via
+    #   amqp
+    #   celery
+    #   kombu
 watchfiles==1.3.0
     # via uvicorn
+wcwidth==0.9.4
+    # via prompt-toolkit
 websockets==17.4
     # via
     #   google-genai

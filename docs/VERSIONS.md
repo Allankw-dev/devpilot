@@ -27,6 +27,8 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | google-genai (Gemini) | 3.0.0 |
 | anthropic (optional provider) | 2.7.0 |
 | httpx2 (dev: starlette TestClient) | 2.16.0 |
+| celery[redis] | 5.7.0 |
+| celery-types (dev, type stubs) | 0.26.0 |
 | ruff / mypy / pytest | 0.17.4 / 1.20.2 / 8.4.2 |
 
 ## Web (apps/web)
@@ -42,7 +44,7 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 | eslint | 8.57 |
 
 Tailwind is on v3 because shadcn/ui's config and plugins are most stable there.
-Celery and pgvector columns arrive with the indexing phase.
+Celery runs the worker; pgvector stores the 768-dimension code embeddings (HNSW, cosine).
 
 Model names are never pinned in code (see `docs/AI.md`). `google-genai` and `anthropic` pull in
 `httpx2`, which makes `starlette.testclient` use it instead of `httpx`, so the tests import

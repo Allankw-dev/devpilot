@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -10,6 +12,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -271,4 +274,87 @@ class LlmUsage(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     calls: Mapped[int] = mapped_column(Integer, default=1)  # provider calls, retries included
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ---------- code indexing ----------
+
+# The pgvector column size is fixed by migration 0005. EMBEDDING_DIMENSIONS must match it,
+# so changing the size later means a new migration plus re-indexing every repository.
+EMBEDDING_COLUMN_DIMENSIONS = 768
+_EmbeddingType = Vector(EMBEDDING_COLUMN_DIMENSIONS).with_variant(JSON(), "sqlite")
+
+
+class RepositoryIndex(Base):
+    """Indexing state of one repository. No row means it was never indexed."""
+
+    __tablename__ = "repository_indexes"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed')", name="status_valid"
+        ),
+    )
+
+    repo_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("repositories.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(String(10))
+    run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)  # identifies the job that owns it
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    commit_sha: Mapped[str | None] = mapped_column(String(40))  # last fully indexed commit
+    embedding_model: Mapped[str | None] = mapped_column(String(100))
+    files_indexed: Mapped[int] = mapped_column(Integer, default=0)
+    files_skipped: Mapped[int] = mapped_column(Integer, default=0)
+    chunks_total: Mapped[int] = mapped_column(Integer, default=0)
+    chunks_skipped: Mapped[int] = mapped_column(Integer, default=0)  # looked like secrets
+    error: Mapped[str | None] = mapped_column(String(500))
+
+
+class IndexedFile(Base):
+    """What we last indexed per file, so an unchanged file is never embedded twice."""
+
+    __tablename__ = "indexed_files"
+
+    repo_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("repositories.id", ondelete="CASCADE"), primary_key=True
+    )
+    path: Mapped[str] = mapped_column(String(500), primary_key=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    chunks_skipped: Mapped[int] = mapped_column(Integer, default=0)  # looked like secrets
+
+
+class CodeChunk(Base):
+    """A piece of source code plus its embedding. Holds repository content: it is removed
+    with the repository, and only ever returned to members of the owning organization."""
+
+    __tablename__ = "code_chunks"
+    __table_args__ = (
+        Index("ix_code_chunks_repo_id_path", "repo_id", "path"),
+        Index(
+            "ix_code_chunks_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ).ddl_if(dialect="postgresql"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    repo_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("repositories.id", ondelete="CASCADE")
+    )
+    path: Mapped[str] = mapped_column(String(500))
+    start_line: Mapped[int] = mapped_column(Integer)
+    end_line: Mapped[int] = mapped_column(Integer)
+    language: Mapped[str | None] = mapped_column(String(30))
+    symbol: Mapped[str | None] = mapped_column(String(200))
+    content: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(_EmbeddingType)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

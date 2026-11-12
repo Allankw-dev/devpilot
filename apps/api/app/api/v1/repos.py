@@ -6,12 +6,14 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AnyMember, DbSession
+from app.api.v1.indexing import index_out
 from app.db.models import (
     Commit,
     GithubInstallation,
     Issue,
     PullRequest,
     Repository,
+    RepositoryIndex,
     WorkflowRun,
 )
 from app.schemas import CiSummary, CommitOut, OverviewOut, RepoOut
@@ -85,6 +87,10 @@ def list_repos(ctx: AnyMember, db: DbSession) -> list[RepoOut]:
         _open_counts(db, Issue, ids),
         _latest_ci(db, ids),
     )
+    indexes: dict[Any, RepositoryIndex] = {}
+    if ids:
+        found = db.scalars(select(RepositoryIndex).where(RepositoryIndex.repo_id.in_(ids)))
+        indexes = {row.repo_id: row for row in found}
     last_commit: dict[Any, Any] = {}
     if ids:
         rows = db.execute(
@@ -107,6 +113,7 @@ def list_repos(ctx: AnyMember, db: DbSession) -> list[RepoOut]:
             open_issues=issues.get(r.id, 0),
             last_commit_at=last_commit.get(r.id),
             ci=ci.get(r.id, "none"),
+            index=index_out(indexes.get(r.id)),
         )
         for r in repos
     ]

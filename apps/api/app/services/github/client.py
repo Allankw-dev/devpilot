@@ -6,12 +6,15 @@
 - Tokens never leave the server.
 """
 
+import io
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any
+from typing import IO, Any
+from urllib.parse import quote
 
 import httpx
 import jwt
@@ -247,3 +250,89 @@ class GitHubClient:
             if len(batch) < per_page:
                 return items, True
         return items, False
+
+    # ---------- repository snapshots (for indexing) ----------
+
+    def installation_head_sha(
+        self, installation_id: int, full_name: str, branch: str
+    ) -> str | None:
+        """Commit sha at the tip of `branch`, or None for an empty repository."""
+        try:
+            data = self.installation_get(
+                installation_id, f"/repos/{full_name}/commits/{quote(branch, safe='')}"
+            )
+        except GitHubError as exc:
+            if exc.status == 409:  # "Git Repository is empty."
+                return None
+            raise
+        sha = str(data.get("sha") or "")
+        if len(sha) != 40:
+            raise GitHubError("GitHub returned an unexpected commit")
+        return sha
+
+    @contextmanager
+    def installation_archive(
+        self, installation_id: int, full_name: str, ref: str, *, max_bytes: int
+    ) -> Iterator[IO[bytes]]:
+        """Stream a repository snapshot (.tar.gz) without holding it in memory or on disk.
+
+        GitHub answers with a redirect to a download host; httpx drops our Authorization header
+        when a redirect leaves the original host, so the token is never sent there. Reading
+        stops with an error once `max_bytes` have arrived.
+        """
+        base = self._s.github_api_url.rstrip("/")
+        url = f"{base}/repos/{full_name}/tarball/{quote(ref, safe='')}"
+        for refreshed in (False, True):
+            headers = self._headers(self.installation_token(installation_id))
+            try:
+                stream_ctx = self._http.stream(
+                    "GET", url, headers=headers, follow_redirects=True, timeout=60.0
+                )
+                resp = stream_ctx.__enter__()
+            except httpx.TransportError as exc:
+                raise GitHubError(f"Could not download the repository: {exc}") from exc
+            try:
+                if resp.status_code == 401 and not refreshed:
+                    resp.read()
+                    self.forget_installation(installation_id)
+                    continue
+                if resp.status_code != 200:
+                    resp.read()
+                    self._check_rate_limit(resp)
+                    raise GitHubError(
+                        "GitHub did not provide the repository archive", resp.status_code
+                    )
+                yield io.BufferedReader(_ByteStream(resp.iter_raw(), max_bytes), 64 * 1024)
+                return
+            finally:
+                stream_ctx.__exit__(None, None, None)
+        raise GitHubError("GitHub rejected the installation token", 401)  # pragma: no cover
+
+
+class _ByteStream(io.RawIOBase):
+    """File-like view of an HTTP body that refuses to deliver more than `max_bytes`."""
+
+    def __init__(self, chunks: Iterator[bytes], max_bytes: int) -> None:
+        self._chunks = chunks
+        self._max = max_bytes
+        self._seen = 0
+        self._buf = b""
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: Any) -> int:
+        if not self._buf:
+            try:
+                self._buf = next(self._chunks)
+            except StopIteration:
+                return 0
+            except httpx.TransportError as exc:
+                raise GitHubError(f"The download was interrupted: {exc}") from exc
+            self._seen += len(self._buf)
+            if self._seen > self._max:
+                raise GitHubError("The repository archive is larger than the allowed size", 413)
+        n = min(len(buffer), len(self._buf))
+        buffer[:n] = self._buf[:n]
+        self._buf = self._buf[n:]
+        return n

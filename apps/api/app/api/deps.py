@@ -4,16 +4,17 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import BackgroundTasks, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.roles import Role, at_least
 from app.core.security import AuthError, AuthUnavailable, TokenVerifier, get_token_verifier
 from app.db.models import Membership, Organization, User
 from app.db.session import get_db, get_session_factory
+from app.jobs.dispatch import Jobs
 from app.services.github.client import GitHubClient
 from app.services.llm.errors import LLMNotConfigured
 from app.services.llm.factory import get_llm_service
@@ -83,6 +84,7 @@ def require_role(minimum: Role) -> Callable[[OrgContext], OrgContext]:
 
 
 AnyMember = Annotated[OrgContext, Depends(get_org_context)]
+MemberCtx = Annotated[OrgContext, Depends(require_role(Role.member))]
 AdminCtx = Annotated[OrgContext, Depends(require_role(Role.admin))]
 OwnerCtx = Annotated[OrgContext, Depends(require_role(Role.owner))]
 
@@ -102,3 +104,29 @@ def get_llm() -> LLMService:
         return get_llm_service()
     except LLMNotConfigured as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+
+
+def get_llm_getter() -> Callable[[], LLMService]:
+    """Lets background work ask for the AI service when it needs it (and fail then, with a
+    clear message, if AI isn't configured). Tests replace this."""
+    return get_llm_service
+
+
+def get_jobs(
+    background: BackgroundTasks,
+    settings: Annotated[Settings, Depends(get_settings)],
+    factory: Annotated[sessionmaker[Session], Depends(get_session_factory_dep)],
+    github: Annotated[GitHubClient, Depends(get_github_client)],
+    llm_getter: Annotated[Callable[[], LLMService], Depends(get_llm_getter)],
+) -> Jobs:
+    return Jobs(
+        backend=settings.job_backend,
+        background=background,
+        factory=factory,
+        github=github,
+        get_llm=llm_getter,
+        settings=settings,
+    )
+
+
+JobsDep = Annotated[Jobs, Depends(get_jobs)]
