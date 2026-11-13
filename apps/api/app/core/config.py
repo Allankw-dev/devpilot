@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 4096
     embedding_dimensions: int = 768  # must match the pgvector column added with indexing
 
+    # Asking questions about code (docs/ASK.md)
+    ask_top_k: int = 12  # pieces of code given to the model
+    ask_max_context_chars: int = 28_000  # budget for those pieces (about 7k tokens)
+    ask_max_output_tokens: int = 8192  # includes the model's hidden reasoning tokens
+    ask_rate_limit_per_minute: int = 10  # per user
+
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None
     gemini_embedding_model: str | None = None

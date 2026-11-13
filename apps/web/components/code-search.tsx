@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ApiError, codeApi, type Repo } from "@/lib/api";
+import { lineLink } from "@/lib/github-links";
 import { accessToken } from "@/lib/supabase/token";
 
 const PREVIEW_LINES = 12;
@@ -79,10 +80,7 @@ export function CodeSearch({ orgId, repos }: { orgId: string; repos: Repo[] }) {
         <ul className="mt-4 space-y-4">
           {search.data.results.map((hit, i) => {
             const repo = byId.get(hit.repository_id);
-            const link =
-              repo && repo.default_branch
-                ? `${repo.html_url}/blob/${encodeURIComponent(repo.default_branch)}/${hit.path}#L${hit.start_line}-L${hit.end_line}`
-                : null;
+            const link = lineLink(repo, hit.path, hit.start_line, hit.end_line);
             const lines = hit.content.split("\n");
             const preview = lines.slice(0, PREVIEW_LINES).join("\n");
             return (

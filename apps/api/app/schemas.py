@@ -234,3 +234,35 @@ class SearchHit(BaseModel):
 
 class SearchOut(BaseModel):
     results: list[SearchHit]
+
+
+# ---------- questions about code ----------
+
+
+class AskRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    question: str = Field(min_length=3, max_length=1000)
+    repository_id: uuid.UUID | None = None
+
+
+class AskCitation(BaseModel):
+    n: int  # the [n] used in the answer text
+    repository_id: uuid.UUID
+    repository: str
+    path: str
+    start_line: int
+    end_line: int
+    symbol: str | None
+    score: float
+
+
+class AskOut(BaseModel):
+    answer: str  # Markdown with [n] citations
+    confidence: str  # high | medium | low
+    missing_context: str
+    citations: list[AskCitation]
+    sources_considered: int
+    model: str
+    input_tokens: int
+    output_tokens: int

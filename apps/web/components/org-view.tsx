@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { AiPanel } from "@/components/ai-panel";
+import { AskPanel } from "@/components/ask-panel";
 import { CodeSearch } from "@/components/code-search";
 import { IndexCell } from "@/components/index-cell";
 import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
@@ -278,6 +279,8 @@ export function OrgView() {
           )}
         </section>
       )}
+
+      {canIndex && repos.data && <AskPanel orgId={orgId} repos={repos.data} />}
 
       {canIndex && repos.data && <CodeSearch orgId={orgId} repos={repos.data} />}
 

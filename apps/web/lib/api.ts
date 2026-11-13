@@ -216,9 +216,33 @@ export interface SearchHit {
   also_in: string[]; // other files holding exactly this code
 }
 
+export interface AskCitation {
+  n: number; // the [n] used in the answer text
+  repository_id: string;
+  repository: string;
+  path: string;
+  start_line: number;
+  end_line: number;
+  symbol: string | null;
+  score: number;
+}
+
+export interface AskResult {
+  answer: string; // Markdown with [n] citations
+  confidence: "high" | "medium" | "low";
+  missing_context: string;
+  citations: AskCitation[];
+  sources_considered: number;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export const codeApi = {
   startIndex: (token: string, orgId: string, repoId: string) =>
     authed<RepoIndex>(`/orgs/${orgId}/repos/${repoId}/index`, token, { method: "POST" }),
+  ask: (token: string, orgId: string, body: { question: string; repository_id?: string }) =>
+    authed<AskResult>(`/orgs/${orgId}/ask`, token, { method: "POST", body: JSON.stringify(body) }),
   search: (token: string, orgId: string, body: { query: string; repository_id?: string }) =>
     authed<{ results: SearchHit[] }>(`/orgs/${orgId}/search`, token, {
       method: "POST",

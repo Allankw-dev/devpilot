@@ -14,14 +14,17 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import get_llm, get_llm_getter
-from app.api.v1 import indexing as indexing_routes
 from app.core.config import Settings, get_settings
 from app.main import app
 from app.services.github.client import GitHubClient
+from app.services.indexing import retrieval
 from app.services.indexing.pipeline import request_index, run_index
+from app.services.llm import LLMService
+from tests.ask_helpers import answer_json
 from tests.conftest import ON_POSTGRES, Person, World
 from tests.github_helpers import FakeGitHub, connect, make_repo
 from tests.index_helpers import REPO, IndexEnv, make_env
+from tests.llm_helpers import FakeProvider, reply
 
 pytestmark = pytest.mark.skipif(not ON_POSTGRES, reason="needs PostgreSQL with pgvector")
 
@@ -166,7 +169,7 @@ def test_search_still_works_if_a_pgvector_setting_is_unknown(
 ) -> None:
     # Older pgvector versions reject some settings; that must not abort the search.
     monkeypatch.setattr(
-        indexing_routes,
+        retrieval,
         "_VECTOR_SETTINGS",
         ("hnsw.setting_that_does_not_exist = 1", "hnsw.ef_search = 100"),
     )
@@ -212,3 +215,62 @@ def test_copies_do_not_use_up_the_requested_number_of_results(env: IndexEnv) -> 
 def test_unique_code_has_no_also_in(env: IndexEnv) -> None:
     hits = search(env, query="stripe invoice refund").json()["results"]
     assert all(h["also_in"] == [] for h in hits)
+
+
+# ---------- asking questions, with real vector search ----------
+
+
+def _ask(e: IndexEnv, gen: FakeProvider, who: Person | None = None, org: str | None = None, **body: object) -> Response:  # noqa: E501
+    llm = LLMService(gen, embedding=e.embedder, sleep=lambda _: None)
+    app.dependency_overrides[get_llm] = lambda: llm
+    body.setdefault("question", "authenticate user credentials session token")
+    return e.client.post(
+        f"{API}/orgs/{org or e.world.org_id}/ask",
+        json=body,
+        headers=(who or e.world.owner).headers,
+    )
+
+
+def test_asking_finds_the_right_code_by_meaning_and_cites_it(env: IndexEnv) -> None:
+    gen = FakeProvider([reply(answer_json("Login is done in `login_user` [1]."))])
+    res = _ask(env, gen)
+    assert res.status_code == 200, res.text
+
+    prompt = gen.requests[0].messages[0].content
+    first_source = prompt.split("source 1 - ", 1)[1].split("</untrusted_content>", 1)[0]
+    assert "auth/login.py" in first_source and "def login_user" in first_source  # best match first
+    (citation,) = res.json()["citations"]
+    assert citation["path"] == "auth/login.py" and citation["symbol"] == "login_user"
+    assert citation["start_line"] == 1
+
+
+def test_asking_never_shows_the_model_another_organizations_code(
+    env: IndexEnv, fake_github: FakeGitHub, person: Callable[[str], Person]
+) -> None:
+    mallory: Person = person("mallory@example.com")
+    org2 = env.client.post(f"{API}/orgs", json={"name": "Evil Corp"}, headers=mallory.headers).json()
+    fake_github.add_installation(888, login="evil-org")
+    fake_github.add_repo(
+        888,
+        make_repo(301, "evil-org/vault"),
+        files={"vault.py": "def authenticate_launch():\n    return 'topsecret launch codes'\n"},
+    )
+    assert connect(env.client, fake_github, mallory.headers, org2["id"], installation_id=888).status_code == 200
+    listing = env.client.get(f"{API}/orgs/{org2['id']}/repos", headers=mallory.headers).json()
+    evil_repo = uuid.UUID(listing[0]["id"])
+    with env.factory() as db:
+        run_id = request_index(db, evil_repo, None)
+    assert run_id is not None
+    run_index(env.factory, env.github, lambda: env.llm, env.settings, evil_repo, run_id)
+
+    # Our organization asks a question that matches the other organization's code very well.
+    gen = FakeProvider([reply(answer_json("done [1]"))])
+    res = _ask(env, gen, question="authenticate launch topsecret codes")
+    assert res.status_code == 200
+    prompt = gen.requests[0].messages[0].content
+    for marker in ("authenticate_launch", "launch codes'", "evil-org", "vault.py"):
+        assert marker not in prompt  # none of the other organization's code or names
+
+    # And the other organization cannot aim a question at ours.
+    own = _ask(env, FakeProvider([reply(answer_json())]), mallory, org2["id"], repository_id=str(env.repo_id))
+    assert own.status_code == 404

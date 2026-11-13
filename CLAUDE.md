@@ -19,6 +19,8 @@ Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worke
 - Pin dependencies and record them in `docs/VERSIONS.md`.
 - Jobs must be safe to run twice (Celery re-delivers after a crash). Claim work atomically, save
   progress in small commits, and never assume a job runs only once.
+- Answers about code must come from numbered sources and be citation-checked server-side; render model text
+  as plain React nodes, never as HTML.
 - Indexed chunks hold repository content: always scope reads by organization, and never log chunk text.
 
 ## Commands

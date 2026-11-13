@@ -3,8 +3,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, text
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AnyMember, DbSession, JobsDep, MemberCtx, get_llm
@@ -13,7 +12,6 @@ from app.core.config import Settings, get_settings
 from app.core.roles import Role, at_least
 from app.db.models import (
     EMBEDDING_COLUMN_DIMENSIONS,
-    CodeChunk,
     GithubInstallation,
     Repository,
     RepositoryIndex,
@@ -21,6 +19,7 @@ from app.db.models import (
 from app.jobs.dispatch import JobQueueUnavailable
 from app.schemas import IndexOut, SearchHit, SearchOut, SearchRequest
 from app.services.indexing.pipeline import abort_request, request_index
+from app.services.indexing.retrieval import search_hits
 from app.services.llm import CallContext, LLMError, LLMService
 
 logger = logging.getLogger(__name__)
@@ -28,8 +27,6 @@ router = APIRouter(tags=["indexing"])
 
 Config = Annotated[Settings, Depends(get_settings)]
 SNIPPET_CHARS = 2000
-OVERFETCH = 4  # candidates per wanted result, so removing copies still leaves enough
-MAX_ALSO_IN = 5
 
 
 def index_out(row: RepositoryIndex | None) -> IndexOut:
@@ -112,20 +109,6 @@ def start_index(
     return queued
 
 
-_VECTOR_SETTINGS = ("hnsw.ef_search = 100", "hnsw.iterative_scan = 'relaxed_order'")
-
-
-def _tune_vector_search(db: Session) -> None:
-    """Best-effort settings so organization filtering doesn't starve the results. Older
-    pgvector versions don't know some of them; that must not break the search."""
-    for setting in _VECTOR_SETTINGS:
-        try:
-            with db.begin_nested():
-                db.execute(text(f"SET LOCAL {setting}"))
-        except DBAPIError:
-            logger.debug("pgvector setting not available: %s", setting)
-
-
 @router.post("/orgs/{org_id}/search", response_model=SearchOut)
 def search_code(
     body: SearchRequest,
@@ -159,42 +142,21 @@ def search_code(
             status.HTTP_502_BAD_GATEWAY, "The embedding model returned an unexpected vector size"
         )
 
-    _tune_vector_search(db)
-    distance = CodeChunk.embedding.cosine_distance(vector)
-    stmt = (
-        select(CodeChunk, Repository.full_name, distance.label("distance"))
-        .join(Repository, Repository.id == CodeChunk.repo_id)
-        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
-        .where(GithubInstallation.org_id == ctx.org.id)  # never leaves the caller's organization
-        .order_by(distance)
-        .limit(min(body.limit * OVERFETCH, 100))
+    found = search_hits(db, ctx.org.id, vector, body.repository_id, body.limit)
+    return SearchOut(
+        results=[
+            SearchHit(
+                repository_id=h.repo_id,
+                repository=h.repository,
+                path=h.path,
+                start_line=h.start_line,
+                end_line=h.end_line,
+                symbol=h.symbol,
+                language=h.language,
+                score=h.score,
+                content=h.content[:SNIPPET_CHARS],
+                also_in=h.also_in,
+            )
+            for h in found
+        ]
     )
-    if body.repository_id is not None:
-        stmt = stmt.where(CodeChunk.repo_id == body.repository_id)
-
-    hits: list[SearchHit] = []
-    by_content: dict[str, SearchHit] = {}
-    for chunk, full_name, dist in db.execute(stmt).all():
-        first = by_content.get(chunk.content)
-        if first is not None:  # the same code again: note where, don't repeat it
-            where = chunk.path if first.repository == full_name else f"{full_name}: {chunk.path}"
-            if len(first.also_in) < MAX_ALSO_IN and where not in first.also_in:
-                first.also_in.append(where)
-            continue
-        if len(hits) >= body.limit:
-            continue  # keep scanning only to credit copies of hits we already have
-        hit = SearchHit(
-            repository_id=chunk.repo_id,
-            repository=full_name,
-            path=chunk.path,
-            start_line=chunk.start_line,
-            end_line=chunk.end_line,
-            symbol=chunk.symbol,
-            language=chunk.language,
-            score=round(1.0 - float(dist), 4),
-            content=chunk.content[:SNIPPET_CHARS],
-            also_in=[],
-        )
-        by_content[chunk.content] = hit
-        hits.append(hit)
-    return SearchOut(results=hits)

@@ -16,6 +16,7 @@ from app.db.models import Membership, Organization, User
 from app.db.session import get_db, get_session_factory
 from app.jobs.dispatch import Jobs
 from app.services.github.client import GitHubClient
+from app.services.indexing.retrieval import Retriever, search_hits
 from app.services.llm.errors import LLMNotConfigured
 from app.services.llm.factory import get_llm_service
 from app.services.llm.service import LLMService
@@ -130,3 +131,8 @@ def get_jobs(
 
 
 JobsDep = Annotated[Jobs, Depends(get_jobs)]
+
+
+def get_retriever() -> Retriever:
+    """How indexed code is found. Needs PostgreSQL with pgvector; tests replace this."""
+    return search_hits

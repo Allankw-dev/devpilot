@@ -57,6 +57,11 @@ celery -A app.jobs.celery_app worker --loglevel=info --pool=solo   # Windows
 No worker yet? Set `JOB_BACKEND=inline` to run jobs inside the API. See
 [`docs/INDEXING.md`](docs/INDEXING.md) for indexing, limits, exclusions and troubleshooting.
 
+## Ask questions about your code
+
+Once a repository is indexed, ask things like "where is authentication implemented?" and get an
+answer with citations to exact files and lines. See [`docs/ASK.md`](docs/ASK.md).
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

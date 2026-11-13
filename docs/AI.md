@@ -53,8 +53,8 @@ timeouts and 5xx (`LLM_MAX_ATTEMPTS`), and one `llm_usage` row per operation
 
 ## Where embeddings are used
 
-Repository indexing and code search (`docs/INDEXING.md`) embed code with `GEMINI_EMBEDDING_MODEL`.
-Each embedding batch is recorded in `llm_usage` (feature `indexing` or `code_search`).
+Repository indexing and code search (`docs/INDEXING.md`) embed code with `GEMINI_EMBEDDING_MODEL`. Questions about code (`docs/ASK.md`) use `GEMINI_MODEL` to write answers.
+Each embedding batch is recorded in `llm_usage` (feature `indexing`, `code_search`, `ask_retrieval` or `ask`).
 
 ## Settings
 
