@@ -67,6 +67,19 @@ def test_answer_with_citations_that_point_at_real_lines(env: AskEnv) -> None:
     assert body["citations"][1]["path"] == second.path
 
 
+def test_citations_come_back_renumbered_in_order_of_use_and_point_at_the_right_code(
+    env: AskEnv,
+) -> None:
+    hits = env.indexed_hits()
+    env.script(answer_json("Billing is in [2]. Login is in [1] and also [2]. Bogus [8]."))
+    body = env.ask().json()
+
+    assert body["answer"] == "Billing is in [1]. Login is in [2] and also [1]. Bogus."
+    first, second = body["citations"]
+    assert (first["n"], first["path"], first["start_line"]) == (1, hits[1].path, hits[1].start_line)
+    assert (second["n"], second["path"]) == (2, hits[0].path)
+
+
 def test_low_confidence_answers_carry_what_is_missing(env: AskEnv) -> None:
     env.script(answer_json("I can't tell from these files.", "low", "No tests were shown."))
     body = env.ask(question="Is it thread safe?").json()
@@ -81,6 +94,7 @@ def test_the_retriever_is_asked_inside_the_callers_organization_only(env: AskEnv
     assert str(call["org_id"]) == str(env.world.org_id)
     assert str(call["repo_id"]) == str(env.repo_id)
     assert call["limit"] == env.settings.ask_top_k and call["dims"] == 768
+    assert call["max_per_path"] == env.settings.ask_max_chunks_per_file  # no README flooding
 
 
 # ---------- exactly what the model is shown ----------
@@ -95,7 +109,11 @@ def test_the_model_gets_numbered_sources_the_rules_and_the_question(env: AskEnv)
     assert request.system is not None and "ONLY the numbered sources" in request.system
     assert request.max_output_tokens == env.settings.ask_max_output_tokens
     for n, hit in enumerate(env.indexed_hits(), 1):
-        assert f"source {n} - octo-org/api {hit.path} lines {hit.start_line}-{hit.end_line}" in prompt
+        kind = "documentation" if hit.path.endswith(".md") else "code"
+        assert (
+            f"source {n} - {kind} - octo-org/api {hit.path} lines {hit.start_line}-{hit.end_line}"
+            in prompt
+        )
     assert prompt.rstrip().endswith("Question: Where is login handled?")
 
 

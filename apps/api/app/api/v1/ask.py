@@ -79,7 +79,14 @@ def ask(
             status.HTTP_502_BAD_GATEWAY, "The embedding model returned an unexpected vector size"
         )
 
-    hits = retrieve(db, ctx.org.id, vector, body.repository_id, settings.ask_top_k)
+    hits = retrieve(
+        db,
+        ctx.org.id,
+        vector,
+        body.repository_id,
+        settings.ask_top_k,
+        settings.ask_max_chunks_per_file,
+    )
     if not hits:
         raise HTTPException(
             status.HTTP_409_CONFLICT,

@@ -11,7 +11,7 @@ from app.services.qa.answer import (
     SYSTEM_PROMPT,
     Source,
     answer_question,
-    cited_sources,
+    finalize_citations,
     render_user_message,
     select_sources,
 )
@@ -65,7 +65,7 @@ def test_every_piece_of_repository_text_is_inside_untrusted_tags() -> None:
             rf"<untrusted_content[^>]*>[^<]*{marker}[^<]*</untrusted_content>", message
         ), f"{marker} is not inside a tag pair"
     assert message.rstrip().endswith("Question: What does it do?")  # the question is ours
-    assert "source 1 - o/r a.py lines 1-3" in message
+    assert "source 1 - code - o/r a.py lines 1-3" in message
 
 
 def test_repository_text_cannot_break_out_of_its_block() -> None:
@@ -87,23 +87,49 @@ def test_the_system_prompt_demands_citations_honesty_and_distrust_of_sources() -
         assert phrase in SYSTEM_PROMPT
 
 
-# ---------- checking citations ----------
+# ---------- checking and tidying citations ----------
 
 
-def test_citations_are_the_real_sources_cited_in_order_of_first_use() -> None:
-    text = "Auth is in [2], which calls [1]. See again [2] and [2][1]."
-    assert [s.n for s in cited_sources(text, sources(3))] == [2, 1]
+def finalize(text: str, n: int = 3) -> tuple[str, list[tuple[int, str]]]:
+    out, cited = finalize_citations(text, sources(n))
+    return out, [(s.n, s.hit.path) for s in cited]
 
 
-def test_numbers_that_match_no_source_are_never_presented_as_citations() -> None:
-    text = "Claimed [0] and [4] and [99] and [1]."
-    assert [s.n for s in cited_sources(text, sources(3))] == [1]
-    assert cited_sources("No citations here.", sources(3)) == []
+def test_citations_are_renumbered_in_order_of_first_use() -> None:
+    text, cited = finalize("Auth is in [3], which calls [1]. See again [3] and [3][1].")
+    assert text == "Auth is in [1], which calls [2]. See again [1] and [1][2]."
+    assert cited == [(1, "f3.py"), (2, "f1.py")]  # new numbers, pointing at the right code
 
 
-def test_array_indexing_in_code_is_not_mistaken_for_a_citation() -> None:
-    text = "Use `items[1]` and\n```python\nvalue = rows[2]\n```\nbut the real support is [3]."
-    assert [s.n for s in cited_sources(text, sources(3))] == [3]
+def test_numbers_that_match_no_source_are_removed_not_presented_as_citations() -> None:
+    text, cited = finalize("Claimed [0] and [4] and [99] and [1].")
+    assert text == "Claimed and and and [1]."
+    assert cited == [(1, "f1.py")]
+    assert finalize("No citations here.") == ("No citations here.", [])
+
+
+def test_a_removed_invented_number_cannot_collide_with_a_renumbered_one() -> None:
+    # [9] is invented. If it were left in, it could later look like a real citation 9.
+    text, cited = finalize("See [2] then [9] and [5].", n=5)
+    assert text == "See [1] then and [2]."
+    assert cited == [(1, "f2.py"), (2, "f5.py")]
+    assert "[9]" not in text
+
+
+def test_array_indexing_in_code_is_left_alone() -> None:
+    text, cited = finalize("Use `items[1]` and\n```python\nvalue = rows[2]\n```\nbut the support is [3].")
+    assert "`items[1]`" in text and "rows[2]" in text  # code untouched
+    assert text.endswith("the support is [1].")  # the real citation, renumbered
+    assert cited == [(1, "f3.py")]
+
+
+def test_documentation_is_labelled_so_the_model_can_tell_claims_from_code() -> None:
+    readme = Source(1, hit("README.md", "# Title", language="markdown"))
+    code = Source(2, hit("app.py", "x = 1"))
+    message = render_user_message("q", [readme, code], [])
+    assert "source 1 - documentation - o/r README.md" in message
+    assert "source 2 - code - o/r app.py" in message
+    assert "CLAIMS" in SYSTEM_PROMPT and "documentation" in SYSTEM_PROMPT
 
 
 # ---------- the whole call ----------
@@ -123,8 +149,8 @@ def test_answer_with_validated_citations_and_usage() -> None:
     provider = FakeProvider([reply(answer_json("It lives in [2] [9].", "medium", "no tests shown"))])
     result = run(provider)
 
-    assert result.text == "It lives in [2] [9]."  # the text is not rewritten...
-    assert [s.hit.path for s in result.citations] == ["f2.py"]  # ...but [9] isn't a citation
+    assert result.text == "It lives in [1]."  # [2] became [1]; the invented [9] is gone
+    assert [(s.n, s.hit.path) for s in result.citations] == [(1, "f2.py")]
     assert (result.confidence, result.missing_context) == ("medium", "no tests shown")
     assert result.sources_considered == 3 and result.model == "fake-model-v1"
     assert result.usage.input_tokens == 10

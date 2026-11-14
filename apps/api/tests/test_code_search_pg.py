@@ -19,6 +19,7 @@ from app.main import app
 from app.services.github.client import GitHubClient
 from app.services.indexing import retrieval
 from app.services.indexing.pipeline import request_index, run_index
+from app.services.indexing.retrieval import search_hits
 from app.services.llm import LLMService
 from tests.ask_helpers import answer_json
 from tests.conftest import ON_POSTGRES, Person, World
@@ -274,3 +275,25 @@ def test_asking_never_shows_the_model_another_organizations_code(
     # And the other organization cannot aim a question at ours.
     own = _ask(env, FakeProvider([reply(answer_json())]), mallory, org2["id"], repository_id=str(env.repo_id))
     assert own.status_code == 404
+
+
+# ---------- one long file cannot crowd out the rest ----------
+
+
+def test_a_long_readme_cannot_fill_every_slot_when_files_are_capped(env: IndexEnv) -> None:
+    section = "authenticate user credentials session token. " * 30
+    env.files["README.md"] = "# Title\n\n" + "\n\n".join(
+        f"## Section {i}\n\n{section}" for i in range(8)
+    )
+    env.set_head("d")
+    assert env.run() == "ready"
+
+    vector = env.embedder.vector("authenticate user credentials session token")
+    org = uuid.UUID(str(env.world.org_id))
+    with env.factory() as db:
+        uncapped = search_hits(db, org, vector, None, 8)
+        capped = search_hits(db, org, vector, None, 8, max_per_path=2)
+
+    assert sum(h.path == "README.md" for h in uncapped) > 2  # the problem, shown
+    assert sum(h.path == "README.md" for h in capped) <= 2  # the fix
+    assert "auth/login.py" in {h.path for h in capped}  # real code makes it into the answer

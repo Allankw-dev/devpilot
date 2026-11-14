@@ -40,6 +40,10 @@ SYSTEM_PROMPT = (
     "than a guess.\n"
     "- Name files and functions where that helps. Keep it concise: short paragraphs, bullet lists "
     "where useful, and fenced code blocks only for brief excerpts copied from the sources.\n"
+    "- Sources marked documentation (README, docs) show what the documentation CLAIMS, not what "
+    "the code does. When a statement rests only on documentation, say so (for example "
+    '"according to the README") and do not use high confidence unless source code backs the '
+    "main claims.\n"
     "- If a file list is given, it only shows which files exist. It is not their contents, so do "
     "not describe what an unseen file does beyond what its name suggests, and say so if you do.\n"
     '- confidence: "high" if the sources directly answer the question, "medium" if they answer '
@@ -93,27 +97,54 @@ def select_sources(hits: list[Hit], max_chars: int) -> list[Source]:
     return chosen
 
 
+DOC_LANGUAGES = frozenset({"markdown", "text"})
+
+
+def source_kind(hit: Hit) -> str:
+    return "documentation" if hit.language in DOC_LANGUAGES else "code"
+
+
 def render_user_message(question: str, sources: list[Source], files: list[str]) -> str:
     parts: list[str] = []
     if files:
         parts.append(untrusted("file list", "\n".join(files)))
     for s in sources:
         h = s.hit
-        label = f"source {s.n} - {h.repository} {h.path} lines {h.start_line}-{h.end_line}"
+        label = (
+            f"source {s.n} - {source_kind(h)} - {h.repository} {h.path} "
+            f"lines {h.start_line}-{h.end_line}"
+        )
         parts.append(untrusted(label, h.content, max_chars=6000))
     return "Sources:\n\n" + "\n\n".join(parts) + f"\n\nQuestion: {question}"
 
 
-def cited_sources(answer: str, sources: list[Source]) -> list[Source]:
-    """The sources the text really cites, in order of first mention. Numbers that don't match
-    a provided source are ignored."""
+def finalize_citations(answer: str, sources: list[Source]) -> tuple[str, list[Source]]:
+    """Check the model's citations and tidy them up.
+
+    - A number that matches no provided source is removed: the model must not be able to point
+      at something it wasn't given.
+    - Real citations are renumbered 1, 2, 3... in order of first use, so the answer reads
+      cleanly whatever rank the search gave each piece of code.
+    - Code like `items[1]` (inline or fenced) is left alone and never counts as a citation.
+    Returns the rewritten text and the cited sources with their new numbers.
+    """
     by_number = {s.n: s for s in sources}
-    seen: list[int] = []
-    for match in _CITATION.finditer(_CODE.sub(" ", answer)):
-        n = int(match.group(1))
-        if n in by_number and n not in seen:
-            seen.append(n)
-    return [by_number[n] for n in seen]
+    order: dict[int, int] = {}  # old number -> new number
+
+    def rewrite(segment: str) -> str:
+        def swap(match: re.Match[str]) -> str:
+            old = int(match.group(2))
+            if old not in by_number:
+                return ""  # an invented citation
+            order.setdefault(old, len(order) + 1)
+            return f"{match.group(1)}[{order[old]}]"
+
+        return re.sub(r"( ?)\[(\d{1,3})\]", swap, segment)
+
+    parts = re.split(f"({_CODE.pattern})", answer, flags=re.DOTALL)
+    text = "".join(p if i % 2 else rewrite(p) for i, p in enumerate(parts))
+    cited = [Source(new, by_number[old].hit) for old, new in order.items()]
+    return text, cited
 
 
 def answer_question(
@@ -134,12 +165,12 @@ def answer_question(
     )
     result = llm.generate_structured(request, AnswerDraft, ctx)
     draft = result.value
-    text = draft.answer.strip()[:MAX_ANSWER_CHARS]
+    text, citations = finalize_citations(draft.answer.strip()[:MAX_ANSWER_CHARS], sources)
     return Answer(
         text=text,
         confidence=draft.confidence,
         missing_context=draft.missing_context.strip()[:1000],
-        citations=cited_sources(text, sources),
+        citations=citations,
         sources_considered=len(sources),
         model=result.model,
         usage=result.usage,

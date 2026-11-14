@@ -37,8 +37,10 @@ class Hit:
     also_in: list[str] = field(default_factory=list)  # other files with exactly this code
 
 
-# (db, org_id, query vector, optional repository, how many) -> best first
-Retriever = Callable[[Session, uuid.UUID, Sequence[float], uuid.UUID | None, int], list[Hit]]
+# (db, org_id, query vector, optional repository, how many, max per file) -> best first
+Retriever = Callable[
+    [Session, uuid.UUID, Sequence[float], uuid.UUID | None, int, int | None], list[Hit]
+]
 
 
 def _tune_vector_search(db: Session) -> None:
@@ -58,9 +60,11 @@ def search_hits(
     vector: Sequence[float],
     repo_id: uuid.UUID | None,
     limit: int,
+    max_per_path: int | None = None,
 ) -> list[Hit]:
     """The `limit` closest distinct pieces of code. Copies of the same code are collapsed into
-    one hit that lists where else it appears."""
+    one hit that lists where else it appears. With `max_per_path`, no single file supplies more
+    than that many hits, so a long README can't crowd out the actual code."""
     _tune_vector_search(db)
     distance = CodeChunk.embedding.cosine_distance(list(vector))
     stmt = (
@@ -76,6 +80,7 @@ def search_hits(
 
     hits: list[Hit] = []
     by_content: dict[str, Hit] = {}
+    per_path: dict[tuple[uuid.UUID, str], int] = {}
     for chunk, full_name, dist in db.execute(stmt).all():
         first = by_content.get(chunk.content)
         if first is not None:  # the same code again: note where, don't repeat it
@@ -85,6 +90,10 @@ def search_hits(
             continue
         if len(hits) >= limit:
             continue  # keep scanning only to credit copies of hits we already have
+        key = (chunk.repo_id, chunk.path)
+        if max_per_path is not None and per_path.get(key, 0) >= max_per_path:
+            continue
+        per_path[key] = per_path.get(key, 0) + 1
         hit = Hit(
             repo_id=chunk.repo_id,
             repository=full_name,

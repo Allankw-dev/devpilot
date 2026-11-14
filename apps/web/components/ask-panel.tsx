@@ -93,6 +93,12 @@ export function AskPanel({ orgId, repos }: { orgId: string; repos: Repo[] }) {
             {ask.isPending ? "Thinking…" : "Ask"}
           </button>
         </div>
+        {repoId === "" && indexed.length > 1 && (
+          <p className="text-xs text-muted-foreground">
+            Tip: choose one repository for questions like “overview of this program”. Otherwise
+            the answer can mix several projects.
+          </p>
+        )}
         <div className="flex flex-wrap gap-2 pt-1">
           {EXAMPLES.map((example) => (
             <button
@@ -123,7 +129,7 @@ export function AskPanel({ orgId, repos }: { orgId: string; repos: Repo[] }) {
               </span>
             </span>
             <span>
-              Based on {result.sources_considered} pieces of code · {result.model}
+              Based on {result.sources_considered} pieces of code and docs · {result.model}
             </span>
           </div>
           <div className="px-4 py-3">

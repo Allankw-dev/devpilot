@@ -71,6 +71,7 @@ class Settings(BaseSettings):
 
     # Asking questions about code (docs/ASK.md)
     ask_top_k: int = 12  # pieces of code given to the model
+    ask_max_chunks_per_file: int = 3  # so one long README can't crowd out the code
     ask_max_context_chars: int = 28_000  # budget for those pieces (about 7k tokens)
     ask_max_output_tokens: int = 8192  # includes the model's hidden reasoning tokens
     ask_rate_limit_per_minute: int = 10  # per user

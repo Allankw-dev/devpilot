@@ -80,10 +80,21 @@ class AskEnv:
 
     def retriever(self) -> Retriever:
         def fake(
-            db: Session, org_id: Any, vector: Sequence[float], repo_id: Any, limit: int
+            db: Session,
+            org_id: Any,
+            vector: Sequence[float],
+            repo_id: Any,
+            limit: int,
+            max_per_path: int | None,
         ) -> list[Hit]:
             self.retrieval_calls.append(
-                {"org_id": org_id, "repo_id": repo_id, "limit": limit, "dims": len(vector)}
+                {
+                    "org_id": org_id,
+                    "repo_id": repo_id,
+                    "limit": limit,
+                    "dims": len(vector),
+                    "max_per_path": max_per_path,
+                }
             )
             return list(self.hits if self.hits is not None else self.indexed_hits())
 
