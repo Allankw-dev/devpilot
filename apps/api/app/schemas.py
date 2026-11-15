@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -266,75 +266,3 @@ class AskOut(BaseModel):
     model: str
     input_tokens: int
     output_tokens: int
-
-
-# ---------- pull request reviews ----------
-
-
-class FindingOut(BaseModel):
-    id: uuid.UUID
-    file: str
-    start_line: int  # 0 = the whole file
-    end_line: int
-    category: str
-    severity: str  # critical | high | medium | low | info
-    confidence: str  # high | medium | low
-    title: str
-    explanation: str
-    suggestion: str
-    origin: str  # ai = the model, scan = the credential scanner
-    status: str  # open | dismissed
-
-
-class FindingUpdate(BaseModel):
-    status: Literal["open", "dismissed"]
-
-
-class ReviewStart(BaseModel):
-    force: bool = False  # review again even if the pull request has not changed
-
-
-class ReviewBriefOut(BaseModel):
-    id: uuid.UUID
-    status: str  # queued | running | ready | failed
-    risk: str | None
-    open_findings: int
-    serious_findings: int  # open critical or high
-    finished_at: datetime | None
-    stale: bool  # the pull request changed after this review
-    error: str | None
-
-
-class PullRequestOut(BaseModel):
-    id: uuid.UUID
-    repository_id: uuid.UUID
-    repository: str
-    number: int
-    title: str
-    state: str
-    draft: bool
-    merged: bool
-    author: str | None
-    html_url: str
-    updated_at: datetime | None
-    review: ReviewBriefOut | None
-
-
-class ReviewOut(BaseModel):
-    id: uuid.UUID
-    pull_request_id: uuid.UUID
-    status: str
-    risk: str | None
-    summary: str | None
-    notes: str | None  # what was and wasn't reviewed
-    head_sha: str | None
-    model: str | None
-    files_total: int
-    files_reviewed: int
-    input_tokens: int
-    output_tokens: int
-    queued_at: datetime | None
-    finished_at: datetime | None
-    error: str | None
-    stale: bool
-    findings: list[FindingOut]

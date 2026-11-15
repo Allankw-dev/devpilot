@@ -21,7 +21,6 @@ from app.services.github.client import GitHubClient
 from app.services.github.sync import run_sync
 from app.services.indexing.pipeline import run_index
 from app.services.llm import LLMService
-from app.services.review.pipeline import run_review
 
 logger = logging.getLogger(__name__)
 
@@ -77,23 +76,6 @@ class Jobs:
         from app.jobs.tasks import index_repository
 
         self._publish(index_repository, str(repo_id), str(run_id))
-
-    def review_pull_request(self, review_id: uuid.UUID, run_id: uuid.UUID) -> None:
-        if self._backend == "inline":
-            self._background.add_task(
-                run_review,
-                self._factory,
-                self._github,
-                self._get_llm,
-                self._settings,
-                review_id,
-                run_id,
-                final_attempt=True,  # nothing would retry it later
-            )
-            return
-        from app.jobs.tasks import review_pull_request
-
-        self._publish(review_pull_request, str(review_id), str(run_id))
 
     @staticmethod
     def _publish(task: object, *args: object) -> None:

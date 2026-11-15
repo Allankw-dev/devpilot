@@ -62,11 +62,6 @@ No worker yet? Set `JOB_BACKEND=inline` to run jobs inside the API. See
 Once a repository is indexed, ask things like "where is authentication implemented?" and get an
 answer with citations to exact files and lines. See [`docs/ASK.md`](docs/ASK.md).
 
-## Pull request reviews
-
-Click **Review** on a pull request for an AI review with findings (file, lines, severity, suggested fix).
-Nothing is posted to GitHub. See [`docs/REVIEWS.md`](docs/REVIEWS.md).
-
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

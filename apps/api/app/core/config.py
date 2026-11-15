@@ -76,13 +76,6 @@ class Settings(BaseSettings):
     ask_max_output_tokens: int = 8192  # includes the model's hidden reasoning tokens
     ask_rate_limit_per_minute: int = 10  # per user
 
-    # Pull request reviews (docs/REVIEWS.md)
-    review_max_files: int = 40  # files whose diffs are sent to the model
-    review_max_diff_chars: int = 60_000  # budget for those diffs (about 15k tokens)
-    review_max_output_tokens: int = 8192  # includes the model's hidden reasoning tokens
-    review_max_findings: int = 25
-    review_rate_limit_per_minute: int = 5  # per user
-
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None
     gemini_embedding_model: str | None = None

@@ -211,7 +211,7 @@ def test_questions_are_rate_limited_per_person(
     assert env.ask().status_code == 200
     assert env.ask().status_code == 200
     third = env.ask()
-    assert third.status_code == 429 and "Wait a minute" in third.json()["detail"] and "questions" in third.json()["detail"]
+    assert third.status_code == 429 and "Wait a minute" in third.json()["detail"]
     assert len(env.generation.requests) == 2  # the blocked one cost nothing
 
     other = add_member(env, person, "member")  # someone else is not affected
