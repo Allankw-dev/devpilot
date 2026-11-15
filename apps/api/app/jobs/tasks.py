@@ -10,11 +10,14 @@ from app.jobs.celery_app import celery_app
 from app.jobs.context import resources
 from app.services.github.sync import run_sync
 from app.services.indexing.pipeline import STALE_RUNNING, TransientIndexError, run_index
+from app.services.review.pipeline import TransientReviewError, run_review
 
 logger = logging.getLogger(__name__)
 
 INDEX_MAX_RETRIES = 6
 INDEX_HARD_TIME_LIMIT = 2 * 3600  # a backstop; the pipeline has its own, gentler runtime limit
+REVIEW_MAX_RETRIES = 4
+REVIEW_HARD_TIME_LIMIT = 15 * 60  # one fetch and one model call: this is generous
 
 
 def retry_delay(retries: int) -> int:
@@ -53,5 +56,32 @@ def index_repository(self: Task[Any, Any], repo_id: str, run_id: str) -> str:
         raise self.retry(exc=exc, countdown=retry_delay(self.request.retries)) from exc
     if outcome == "busy" and not final:
         # Another worker holds this run. If it died, its heartbeat goes stale and we take over.
+        raise self.retry(countdown=int(STALE_RUNNING.total_seconds()) + 60)
+    return outcome
+
+
+@celery_app.task(
+    bind=True,
+    name="devpilot.review_pull_request",
+    max_retries=REVIEW_MAX_RETRIES,
+    time_limit=REVIEW_HARD_TIME_LIMIT,
+)
+def review_pull_request(self: Task[Any, Any], review_id: str, run_id: str) -> str:
+    """Review one pull request. Retries on rate limits and outages."""
+    r = resources()
+    final = self.request.retries >= REVIEW_MAX_RETRIES
+    try:
+        outcome = run_review(
+            r.factory,
+            r.github,
+            r.get_llm,
+            r.settings,
+            uuid.UUID(review_id),
+            uuid.UUID(run_id),
+            final_attempt=final,
+        )
+    except TransientReviewError as exc:
+        raise self.retry(exc=exc, countdown=retry_delay(self.request.retries)) from exc
+    if outcome == "busy" and not final:
         raise self.retry(countdown=int(STALE_RUNNING.total_seconds()) + 60)
     return outcome

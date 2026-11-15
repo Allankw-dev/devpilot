@@ -358,3 +358,70 @@ class CodeChunk(Base):
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(_EmbeddingType)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ---------- pull request reviews ----------
+
+
+class PullRequestReview(Base):
+    """One AI review of one pull request. Nothing here is ever posted to GitHub."""
+
+    __tablename__ = "pull_request_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed')", name="status_valid"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    pr_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("pull_requests.id", ondelete="CASCADE"), index=True
+    )
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    status: Mapped[str] = mapped_column(String(10))
+    run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)  # identifies the job that owns it
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pr_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # when asked
+    head_sha: Mapped[str | None] = mapped_column(String(40))
+    model: Mapped[str | None] = mapped_column(String(100))
+    summary: Mapped[str | None] = mapped_column(Text)
+    risk: Mapped[str | None] = mapped_column(String(10))
+    notes: Mapped[str | None] = mapped_column(String(1500))  # what was and wasn't reviewed
+    files_total: Mapped[int] = mapped_column(Integer, default=0)
+    files_reviewed: Mapped[int] = mapped_column(Integer, default=0)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(500))
+
+
+class ReviewFinding(Base):
+    __tablename__ = "review_findings"
+    __table_args__ = (
+        CheckConstraint(
+            "severity IN ('critical', 'high', 'medium', 'low', 'info')", name="severity_valid"
+        ),
+        CheckConstraint("confidence IN ('high', 'medium', 'low')", name="confidence_valid"),
+        CheckConstraint("origin IN ('ai', 'scan')", name="origin_valid"),
+        CheckConstraint("status IN ('open', 'dismissed')", name="status_valid"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    review_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("pull_request_reviews.id", ondelete="CASCADE"), index=True
+    )
+    file_path: Mapped[str] = mapped_column(String(500))
+    start_line: Mapped[int] = mapped_column(Integer, default=0)  # 0 = the whole file
+    end_line: Mapped[int] = mapped_column(Integer, default=0)
+    category: Mapped[str] = mapped_column(String(20))
+    severity: Mapped[str] = mapped_column(String(10))
+    confidence: Mapped[str] = mapped_column(String(10))
+    title: Mapped[str] = mapped_column(String(200))
+    explanation: Mapped[str] = mapped_column(Text)
+    suggestion: Mapped[str] = mapped_column(Text, default="")
+    origin: Mapped[str] = mapped_column(String(5))  # ai = the model, scan = the credential scanner
+    status: Mapped[str] = mapped_column(String(10), default="open")

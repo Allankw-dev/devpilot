@@ -8,6 +8,7 @@ import { AiPanel } from "@/components/ai-panel";
 import { AskPanel } from "@/components/ask-panel";
 import { CodeSearch } from "@/components/code-search";
 import { IndexCell } from "@/components/index-cell";
+import { PullRequests } from "@/components/pull-requests";
 import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
@@ -279,6 +280,8 @@ export function OrgView() {
           )}
         </section>
       )}
+
+      {repos.data && repos.data.length > 0 && <PullRequests orgId={orgId} canReview={canIndex} />}
 
       {canIndex && repos.data && <AskPanel orgId={orgId} repos={repos.data} />}
 
