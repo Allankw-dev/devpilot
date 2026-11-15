@@ -1,17 +1,14 @@
 import logging
-import uuid
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from app.api.deps import DbSession, MemberCtx, get_llm, get_retriever
 from app.api.llm_http import llm_http_error
+from app.api.ratelimit import check_rate_limit
 from app.api.v1.indexing import _repo_in_org
 from app.core.config import Settings, get_settings
-from app.db.models import EMBEDDING_COLUMN_DIMENSIONS, LlmUsage
+from app.db.models import EMBEDDING_COLUMN_DIMENSIONS
 from app.schemas import AskCitation, AskOut, AskRequest
 from app.services.indexing.retrieval import Retriever, file_list, search_hits
 from app.services.llm import CallContext, LLMError, LLMService
@@ -22,25 +19,6 @@ router = APIRouter(tags=["ask"])
 
 Config = Annotated[Settings, Depends(get_settings)]
 FEATURE = "ask"
-
-
-def _check_rate_limit(db: Session, user_id: uuid.UUID, per_minute: int) -> None:
-    """Questions cost tokens, so cap how fast one person can ask. Uses the usage log, so it
-    needs no extra infrastructure."""
-    recent = db.scalar(
-        select(func.count())
-        .select_from(LlmUsage)
-        .where(
-            LlmUsage.user_id == user_id,
-            LlmUsage.feature == FEATURE,
-            LlmUsage.created_at >= datetime.now(UTC) - timedelta(seconds=60),
-        )
-    )
-    if (recent or 0) >= per_minute:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "You're asking a lot of questions. Wait a minute and try again.",
-        )
 
 
 @router.post("/orgs/{org_id}/ask", response_model=AskOut)
@@ -63,7 +41,9 @@ def ask(
         )
     if body.repository_id is not None:
         _repo_in_org(db, ctx.org.id, body.repository_id)
-    _check_rate_limit(db, ctx.user.id, settings.ask_rate_limit_per_minute)
+    check_rate_limit(
+        db, ctx.user.id, FEATURE, settings.ask_rate_limit_per_minute, what="questions"
+    )
 
     try:
         embedded = llm.embed(

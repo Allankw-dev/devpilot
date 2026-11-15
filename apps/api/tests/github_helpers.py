@@ -76,6 +76,52 @@ def make_repo(
     }
 
 
+def make_pr_details(
+    number: int,
+    *,
+    title: str | None = None,
+    body: str = "",
+    head_sha: str = "c" * 40,
+    head_ref: str = "feature",
+    base_ref: str = "main",
+) -> dict[str, Any]:
+    """What GET /repos/{repo}/pulls/{n} returns (the part the reviewer reads)."""
+    return {
+        "number": number,
+        "title": title or f"PR {number}",
+        "body": body,
+        "head": {"sha": head_sha, "ref": head_ref},
+        "base": {"ref": base_ref},
+    }
+
+
+def make_pr_file(
+    filename: str,
+    patch: str | None,
+    *,
+    status: str = "modified",
+    additions: int | None = None,
+    deletions: int = 0,
+    previous: str | None = None,
+) -> dict[str, Any]:
+    """One entry of GET /repos/{repo}/pulls/{n}/files."""
+    added = additions if additions is not None else sum(
+        1 for ln in (patch or "").split("\n") if ln.startswith("+")
+    )
+    item: dict[str, Any] = {
+        "filename": filename,
+        "status": status,
+        "additions": added,
+        "deletions": deletions,
+        "changes": added + deletions,
+    }
+    if patch is not None:
+        item["patch"] = patch
+    if previous:
+        item["previous_filename"] = previous
+    return item
+
+
 def make_pr(
     number: int,
     state: str = "open",
@@ -305,6 +351,23 @@ class FakeGitHub:
             return Response(
                 302, headers={"location": f"https://codeload.github.com/{full}/legacy.tar.gz/{ref}"}
             )
+
+        pf = re.fullmatch(r"/repos/([^/]+/[^/]+)/pulls/(\d+)/files", path)
+        if pf:
+            full, number = pf.group(1), int(pf.group(2))
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            return Response(200, json=page(self.data[full].get("pr_files", {}).get(number, [])))
+
+        pd = re.fullmatch(r"/repos/([^/]+/[^/]+)/pulls/(\d+)", path)
+        if pd:
+            full, number = pd.group(1), int(pd.group(2))
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            details = self.data[full].get("pr_details", {}).get(number)
+            if details is None:
+                return Response(404, json={"message": "Not Found"})
+            return Response(200, json=details)
 
         rm = re.fullmatch(r"/repos/([^/]+/[^/]+)/(pulls|issues|commits|actions/runs)", path)
         if rm:
