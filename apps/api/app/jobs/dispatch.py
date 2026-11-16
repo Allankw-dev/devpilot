@@ -17,6 +17,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
+from app.services.ci.pipeline import run_analysis
 from app.services.github.client import GitHubClient
 from app.services.github.sync import run_sync
 from app.services.indexing.pipeline import run_index
@@ -94,6 +95,23 @@ class Jobs:
         from app.jobs.tasks import review_pull_request
 
         self._publish(review_pull_request, str(review_id), str(run_id))
+
+    def analyze_ci_run(self, analysis_id: uuid.UUID, run_id: uuid.UUID) -> None:
+        if self._backend == "inline":
+            self._background.add_task(
+                run_analysis,
+                self._factory,
+                self._github,
+                self._get_llm,
+                self._settings,
+                analysis_id,
+                run_id,
+                final_attempt=True,  # nothing would retry it later
+            )
+            return
+        from app.jobs.tasks import analyze_ci_run
+
+        self._publish(analyze_ci_run, str(analysis_id), str(run_id))
 
     @staticmethod
     def _publish(task: object, *args: object) -> None:

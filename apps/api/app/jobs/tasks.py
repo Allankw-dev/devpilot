@@ -8,6 +8,7 @@ from celery import Task
 
 from app.jobs.celery_app import celery_app
 from app.jobs.context import resources
+from app.services.ci.pipeline import TransientCiError, run_analysis
 from app.services.github.sync import run_sync
 from app.services.indexing.pipeline import STALE_RUNNING, TransientIndexError, run_index
 from app.services.review.pipeline import TransientReviewError, run_review
@@ -18,6 +19,8 @@ INDEX_MAX_RETRIES = 6
 INDEX_HARD_TIME_LIMIT = 2 * 3600  # a backstop; the pipeline has its own, gentler runtime limit
 REVIEW_MAX_RETRIES = 4
 REVIEW_HARD_TIME_LIMIT = 15 * 60  # one fetch and one model call: this is generous
+CI_MAX_RETRIES = 4
+CI_HARD_TIME_LIMIT = 15 * 60  # a few log downloads and one model call
 
 
 def retry_delay(retries: int) -> int:
@@ -81,6 +84,33 @@ def review_pull_request(self: Task[Any, Any], review_id: str, run_id: str) -> st
             final_attempt=final,
         )
     except TransientReviewError as exc:
+        raise self.retry(exc=exc, countdown=retry_delay(self.request.retries)) from exc
+    if outcome == "busy" and not final:
+        raise self.retry(countdown=int(STALE_RUNNING.total_seconds()) + 60)
+    return outcome
+
+
+@celery_app.task(
+    bind=True,
+    name="devpilot.analyze_ci_run",
+    max_retries=CI_MAX_RETRIES,
+    time_limit=CI_HARD_TIME_LIMIT,
+)
+def analyze_ci_run(self: Task[Any, Any], analysis_id: str, run_id: str) -> str:
+    """Analyze one failed workflow run. Retries on rate limits and outages."""
+    r = resources()
+    final = self.request.retries >= CI_MAX_RETRIES
+    try:
+        outcome = run_analysis(
+            r.factory,
+            r.github,
+            r.get_llm,
+            r.settings,
+            uuid.UUID(analysis_id),
+            uuid.UUID(run_id),
+            final_attempt=final,
+        )
+    except TransientCiError as exc:
         raise self.retry(exc=exc, countdown=retry_delay(self.request.retries)) from exc
     if outcome == "busy" and not final:
         raise self.retry(countdown=int(STALE_RUNNING.total_seconds()) + 60)

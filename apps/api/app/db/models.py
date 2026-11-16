@@ -425,3 +425,67 @@ class ReviewFinding(Base):
     suggestion: Mapped[str] = mapped_column(Text, default="")
     origin: Mapped[str] = mapped_column(String(5))  # ai = the model, scan = the credential scanner
     status: Mapped[str] = mapped_column(String(10), default="open")
+
+
+CI_CATEGORIES = (
+    "test_failure",
+    "build_error",
+    "lint_or_types",
+    "dependency",
+    "configuration",
+    "infrastructure",
+    "flaky_or_timeout",
+    "unknown",
+)
+
+
+class CiAnalysis(Base):
+    """One AI analysis of one failed workflow run. Nothing here is ever posted to GitHub, and
+    the logs themselves are not stored: only the verified short quotes that back the answer."""
+
+    __tablename__ = "ci_analyses"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed')", name="status_valid"
+        ),
+        CheckConstraint(
+            "category IS NULL OR category IN ("
+            + ", ".join(f"'{c}'" for c in CI_CATEGORIES)
+            + ")",
+            name="category_valid",
+        ),
+        CheckConstraint(
+            "confidence IS NULL OR confidence IN ('high', 'medium', 'low')",
+            name="confidence_valid",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    workflow_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workflow_runs.id", ondelete="CASCADE"), index=True
+    )
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    status: Mapped[str] = mapped_column(String(10))
+    run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)  # identifies the job that owns it
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    run_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # when asked
+    head_sha: Mapped[str | None] = mapped_column(String(40))
+    model: Mapped[str | None] = mapped_column(String(100))
+    summary: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(String(20))
+    confidence: Mapped[str | None] = mapped_column(String(10))
+    likely_cause: Mapped[str | None] = mapped_column(Text)
+    suggested_fix: Mapped[str | None] = mapped_column(Text)
+    failed_steps: Mapped[list[dict[str, str | None]] | None] = mapped_column(JSON)
+    evidence: Mapped[list[dict[str, str]] | None] = mapped_column(JSON)
+    notes: Mapped[str | None] = mapped_column(String(1500))  # what was and wasn't read
+    jobs_total: Mapped[int] = mapped_column(Integer, default=0)
+    jobs_analyzed: Mapped[int] = mapped_column(Integer, default=0)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(500))

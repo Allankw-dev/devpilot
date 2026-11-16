@@ -83,6 +83,13 @@ class Settings(BaseSettings):
     review_max_findings: int = 25
     review_rate_limit_per_minute: int = 5  # per user
 
+    # CI failure analysis (docs/CI.md)
+    ci_max_jobs: int = 4  # failed jobs whose logs are read per run
+    ci_max_log_bytes: int = 1_000_000  # the end of each job log is kept, up to this much
+    ci_max_log_chars: int = 40_000  # budget for log text sent to the model, across all jobs
+    ci_max_output_tokens: int = 4096  # includes the model's hidden reasoning tokens
+    ci_rate_limit_per_minute: int = 5  # per user
+
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None
     gemini_embedding_model: str | None = None

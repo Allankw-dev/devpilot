@@ -331,3 +331,77 @@ export const reviewApi = {
       body: JSON.stringify({ status }),
     }),
 };
+
+// ---------- CI failure analysis ----------
+
+export type CiCategory =
+  | "test_failure"
+  | "build_error"
+  | "lint_or_types"
+  | "dependency"
+  | "configuration"
+  | "infrastructure"
+  | "flaky_or_timeout"
+  | "unknown";
+
+export interface CiAnalysisBrief {
+  id: string;
+  status: "queued" | "running" | "ready" | "failed";
+  category: CiCategory | null;
+  confidence: "high" | "medium" | "low" | null;
+  finished_at: string | null;
+  stale: boolean; // the run changed (was re-run) after this analysis
+  error: string | null;
+}
+
+export interface CiRunRow {
+  id: string;
+  repository_id: string;
+  repository: string;
+  name: string | null;
+  event: string | null;
+  branch: string | null;
+  run_number: number | null;
+  status: string | null;
+  conclusion: string | null;
+  html_url: string | null;
+  updated_at: string | null;
+  analyzable: boolean; // a finished run that failed
+  analysis: CiAnalysisBrief | null;
+}
+
+export interface CiAnalysis {
+  id: string;
+  run_id: string;
+  status: "queued" | "running" | "ready" | "failed";
+  summary: string | null;
+  category: CiCategory | null;
+  confidence: "high" | "medium" | "low" | null;
+  likely_cause: string | null;
+  suggested_fix: string | null;
+  failed_steps: { job: string; step: string | null }[];
+  evidence: { job: string; quote: string }[]; // copied from the logs and checked against them
+  notes: string | null; // what was and was not read
+  head_sha: string | null;
+  model: string | null;
+  jobs_total: number;
+  jobs_analyzed: number;
+  input_tokens: number;
+  output_tokens: number;
+  queued_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  stale: boolean;
+}
+
+export const ciApi = {
+  list: (token: string, orgId: string, state: "failed" | "all") =>
+    authed<CiRunRow[]>(`/orgs/${orgId}/ci-runs?state=${state}`, token),
+  get: (token: string, orgId: string, runId: string) =>
+    authed<CiAnalysis | null>(`/orgs/${orgId}/ci-runs/${runId}/analysis`, token),
+  start: (token: string, orgId: string, runId: string, force: boolean) =>
+    authed<CiAnalysis>(`/orgs/${orgId}/ci-runs/${runId}/analysis`, token, {
+      method: "POST",
+      body: JSON.stringify({ force }),
+    }),
+};

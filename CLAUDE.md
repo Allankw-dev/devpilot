@@ -24,6 +24,7 @@ Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worke
 - Never post to GitHub or change a repository on a model's say-so. Review findings are checked against
   the real diff server-side, credential-looking lines never go to the model, and the app stays read-only.
 - Indexed chunks hold repository content: always scope reads by organization, and never log chunk text.
+- CI logs are untrusted and may hold secrets: redact credential-looking lines before the model sees them, never store raw logs, check every quoted log line against what was sent, and never re-run or change a workflow.
 
 ## Commands
 - API: `cd apps/api && pytest && ruff check . && mypy .`

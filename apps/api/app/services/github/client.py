@@ -308,6 +308,62 @@ class GitHubClient:
                 stream_ctx.__exit__(None, None, None)
         raise GitHubError("GitHub rejected the installation token", 401)  # pragma: no cover
 
+    def installation_job_log(
+        self, installation_id: int, full_name: str, job_id: int, *, max_bytes: int
+    ) -> tuple[str, bool]:
+        """The END of one workflow job's log as text, and whether earlier output was cut off.
+
+        GitHub answers with a redirect to a signed download URL; httpx drops our Authorization
+        header when a redirect leaves the original host, so the token is never sent there.
+        Only the last `max_bytes` are kept (a failure is almost always near the end), and
+        reading stops after a hard cap so a runaway log can't tie up the worker.
+        """
+        base = self._s.github_api_url.rstrip("/")
+        url = f"{base}/repos/{full_name}/actions/jobs/{int(job_id)}/logs"
+        hard_cap = max(max_bytes * 20, 20_000_000)
+        for refreshed in (False, True):
+            headers = self._headers(self.installation_token(installation_id))
+            try:
+                stream_ctx = self._http.stream(
+                    "GET", url, headers=headers, follow_redirects=True, timeout=60.0
+                )
+                resp = stream_ctx.__enter__()
+            except httpx.TransportError as exc:
+                raise GitHubError(f"Could not download the job log: {exc}") from exc
+            try:
+                if resp.status_code == 401 and not refreshed:
+                    resp.read()
+                    self.forget_installation(installation_id)
+                    continue
+                if resp.status_code != 200:
+                    resp.read()
+                    self._check_rate_limit(resp)
+                    raise GitHubError("GitHub did not provide the job log", resp.status_code)
+                tail = b""
+                seen = 0
+                cut = False
+                try:
+                    for chunk in resp.iter_raw():
+                        seen += len(chunk)
+                        tail += chunk
+                        if len(tail) > max_bytes * 2:
+                            tail = tail[-max_bytes:]
+                            cut = True
+                        if seen > hard_cap:
+                            raise GitHubError("The job log is larger than the allowed size", 413)
+                except httpx.TransportError as exc:
+                    raise GitHubError(f"The log download was interrupted: {exc}") from exc
+                if len(tail) > max_bytes:
+                    tail = tail[-max_bytes:]
+                    cut = True
+                text = tail.decode("utf-8", errors="replace")
+                if cut:
+                    text = text.split("\n", 1)[1] if "\n" in text else text  # drop a torn line
+                return text, cut
+            finally:
+                stream_ctx.__exit__(None, None, None)
+        raise GitHubError("GitHub rejected the installation token", 401)  # pragma: no cover
+
 
 class _ByteStream(io.RawIOBase):
     """File-like view of an HTTP body that refuses to deliver more than `max_bytes`."""

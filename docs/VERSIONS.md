@@ -52,4 +52,5 @@ Model names are never pinned in code (see `docs/AI.md`). `google-genai` and `ant
 
 GitHub REST API version is pinned to `2022-11-28` (setting `GITHUB_API_VERSION`).
 GitHub released `2026-03-10` with breaking changes; upgrade deliberately, not by accident.
-Sync runs as a FastAPI background task for now. Celery arrives with the indexing phase.
+GitHub syncs, indexing, pull request reviews and CI analyses run as Celery jobs (or inline with
+`JOB_BACKEND=inline`). Phase 8 (CI analysis) added no new dependencies.

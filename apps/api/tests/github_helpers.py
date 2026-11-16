@@ -19,6 +19,7 @@ CLIENT_ID = "Iv1.test"
 CLIENT_SECRET = "client-secret"
 WEBHOOK_SECRET = "whsec-test"
 INSTALLATION_ID = 777
+LOG_HOST = "pipelines.logs.example"  # where GitHub redirects job log downloads
 
 
 def iso(dt: datetime) -> str:
@@ -203,6 +204,26 @@ def make_run(
     }
 
 
+def make_job(
+    job_id: int,
+    name: str,
+    *,
+    conclusion: str | None = "failure",
+    failed_step: str | None = "Run tests",
+) -> dict[str, Any]:
+    steps = [{"name": "Set up job", "number": 1, "conclusion": "success"}]
+    if failed_step:
+        steps.append({"name": failed_step, "number": 2, "conclusion": "failure"})
+    return {
+        "id": job_id,
+        "name": name,
+        "status": "completed",
+        "conclusion": conclusion,
+        "html_url": f"https://github.com/x/y/actions/runs/1/job/{job_id}",
+        "steps": steps,
+    }
+
+
 # ---------- the fake server ----------
 
 
@@ -219,6 +240,7 @@ class FakeGitHub:
         self.token_requests = 0
         self.fail: dict[str, tuple[int, dict[str, str]]] = {}
         self.codeload_auth: list[str | None] = []  # Authorization header seen by the download host
+        self.log_auth: list[str | None] = []  # same, for the host job logs are served from
 
     # -- setup helpers --
     def add_installation(
@@ -267,6 +289,16 @@ class FakeGitHub:
                 stream=httpx.ByteStream(self._archive(owner_repo)),
                 headers={"content-type": "application/x-gzip"},
             )
+        if request.url.host == LOG_HOST:  # where job log redirects end up
+            self.log_auth.append(request.headers.get("authorization"))
+            job_id = int(path.strip("/").split("/")[-1])
+            for repo_data in self.data.values():
+                if job_id in repo_data.get("job_logs", {}):
+                    body = str(repo_data["job_logs"][job_id]).encode()
+                    return Response(
+                        200, stream=httpx.ByteStream(body), headers={"content-type": "text/plain"}
+                    )
+            return Response(404, json={"message": "log gone"})
         for needle, (status, headers) in self.fail.items():
             if needle in path:
                 return Response(status, headers=headers, json={"message": "failure injected"})
@@ -368,6 +400,23 @@ class FakeGitHub:
             if details is None:
                 return Response(404, json={"message": "Not Found"})
             return Response(200, json=details)
+
+        jm = re.fullmatch(r"/repos/([^/]+/[^/]+)/actions/runs/(\d+)/jobs", path)
+        if jm:
+            full, run_id = jm.group(1), int(jm.group(2))
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            jobs = self.data[full].get("run_jobs", {}).get(run_id, [])
+            return Response(200, json={"total_count": len(jobs), "jobs": page(jobs)})
+
+        lm = re.fullmatch(r"/repos/([^/]+/[^/]+)/actions/jobs/(\d+)/logs", path)
+        if lm:
+            full, job_id = lm.group(1), int(lm.group(2))
+            if full not in {r["full_name"] for r in self.repos.get(iid, [])}:
+                return Response(404, json={"message": "Not Found"})
+            if job_id not in self.data[full].get("job_logs", {}):
+                return Response(404, json={"message": "Logs expired"})
+            return Response(302, headers={"location": f"https://{LOG_HOST}/logs/{job_id}"})
 
         rm = re.fullmatch(r"/repos/([^/]+/[^/]+)/(pulls|issues|commits|actions/runs)", path)
         if rm:

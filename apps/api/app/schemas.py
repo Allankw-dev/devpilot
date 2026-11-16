@@ -338,3 +338,70 @@ class ReviewOut(BaseModel):
     error: str | None
     stale: bool
     findings: list[FindingOut]
+
+
+# ---------- CI failure analysis ----------
+
+
+class CiAnalysisStart(BaseModel):
+    force: bool = False  # analyze again even if the run has not changed
+
+
+class CiAnalysisBriefOut(BaseModel):
+    id: uuid.UUID
+    status: str  # queued | running | ready | failed
+    category: str | None
+    confidence: str | None
+    finished_at: datetime | None
+    stale: bool  # the run changed (was re-run) after this analysis
+    error: str | None
+
+
+class CiRunOut(BaseModel):
+    id: uuid.UUID
+    repository_id: uuid.UUID
+    repository: str
+    name: str | None
+    event: str | None
+    branch: str | None
+    run_number: int | None
+    status: str | None
+    conclusion: str | None
+    html_url: str | None
+    updated_at: datetime | None
+    analyzable: bool  # a finished run that failed
+    analysis: CiAnalysisBriefOut | None
+
+
+class CiFailedStepOut(BaseModel):
+    job: str
+    step: str | None
+
+
+class CiEvidenceOut(BaseModel):
+    job: str
+    quote: str  # copied from the log and checked against it
+
+
+class CiAnalysisOut(BaseModel):
+    id: uuid.UUID
+    run_id: uuid.UUID  # our workflow run record
+    status: str  # queued | running | ready | failed
+    summary: str | None
+    category: str | None
+    confidence: str | None
+    likely_cause: str | None
+    suggested_fix: str | None
+    failed_steps: list[CiFailedStepOut]
+    evidence: list[CiEvidenceOut]
+    notes: str | None  # what was and wasn't read
+    head_sha: str | None
+    model: str | None
+    jobs_total: int
+    jobs_analyzed: int
+    input_tokens: int
+    output_tokens: int
+    queued_at: datetime | None
+    finished_at: datetime | None
+    error: str | None
+    stale: bool

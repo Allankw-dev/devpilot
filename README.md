@@ -67,6 +67,12 @@ answer with citations to exact files and lines. See [`docs/ASK.md`](docs/ASK.md)
 Click **Review** on a pull request for an AI review with findings (file, lines, severity, suggested fix).
 Nothing is posted to GitHub. See [`docs/REVIEWS.md`](docs/REVIEWS.md).
 
+## CI failure analysis
+
+Click **Analyze** on a failed GitHub Actions run for an AI explanation of what broke and why, with
+quotes from the logs. Credential-looking lines never reach the model. Nothing is posted to GitHub or
+re-run. See [`docs/CI.md`](docs/CI.md).
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 
 import { AiPanel } from "@/components/ai-panel";
 import { AskPanel } from "@/components/ask-panel";
+import { CiRuns } from "@/components/ci-runs";
 import { CodeSearch } from "@/components/code-search";
 import { IndexCell } from "@/components/index-cell";
 import { PullRequests } from "@/components/pull-requests";
@@ -282,6 +283,8 @@ export function OrgView() {
       )}
 
       {repos.data && repos.data.length > 0 && <PullRequests orgId={orgId} canReview={canIndex} />}
+
+      {repos.data && repos.data.length > 0 && <CiRuns orgId={orgId} canAnalyze={canIndex} />}
 
       {canIndex && repos.data && <AskPanel orgId={orgId} repos={repos.data} />}
 
