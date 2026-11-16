@@ -22,6 +22,7 @@ from app.services.llm import LLMService
 from app.services.llm.errors import (
     LLMAuthError,
     LLMNotConfigured,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMUnavailable,
 )
@@ -311,6 +312,14 @@ def test_a_corrupt_archive_is_treated_as_a_failed_download(env: IndexEnv) -> Non
 
 
 # ---------- failures: retry later vs. give up ----------
+
+
+def test_a_spent_daily_quota_fails_the_index_at_once_without_retries(env: IndexEnv) -> None:
+    env.embedder.fail_with = LLMQuotaExhausted("daily", retry_after=600)
+    assert env.run(env.request(), final_attempt=False) == "failed"
+    index = env.index()
+    assert index.status == "failed" and "daily request quota is used up" in (index.error or "")
+    assert "about 10 minutes" in (index.error or "")
 
 
 def test_rate_limit_leaves_the_run_queued_for_an_automatic_retry(env: IndexEnv) -> None:

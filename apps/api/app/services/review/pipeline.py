@@ -32,6 +32,7 @@ from app.services.llm.errors import (
     LLMBadRequest,
     LLMBlocked,
     LLMInvalidOutput,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMUnavailable,
@@ -165,6 +166,8 @@ def abort_review(db: Session, review_id: uuid.UUID, run_id: uuid.UUID, message: 
 
 
 def classify(exc: Exception) -> TransientReviewError | ReviewFailed | None:
+    if isinstance(exc, LLMQuotaExhausted):  # waiting minutes won't help: say so, don't retry
+        return ReviewFailed(exc.user_message())
     if isinstance(exc, LLMRateLimited):
         return TransientReviewError("The AI provider is rate limiting requests.")
     if isinstance(exc, LLMTimeout | LLMUnavailable):

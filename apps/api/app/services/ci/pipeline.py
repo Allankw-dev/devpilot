@@ -29,6 +29,7 @@ from app.services.llm.errors import (
     LLMBadRequest,
     LLMBlocked,
     LLMInvalidOutput,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMUnavailable,
@@ -163,6 +164,8 @@ def abort_analysis(db: Session, analysis_id: uuid.UUID, run_id: uuid.UUID, messa
 
 
 def classify(exc: Exception) -> TransientCiError | CiFailed | None:
+    if isinstance(exc, LLMQuotaExhausted):  # waiting minutes won't help: say so, don't retry
+        return CiFailed(exc.user_message())
     if isinstance(exc, LLMRateLimited):
         return TransientCiError("The AI provider is rate limiting requests.")
     if isinstance(exc, LLMTimeout | LLMUnavailable):

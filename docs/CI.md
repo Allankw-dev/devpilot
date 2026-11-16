@@ -80,4 +80,5 @@ Logs are **not stored**. Only the short quotes that back the answer are kept.
 | "The AI returned an analysis that could not be used" | the model broke the format: click Retry, or raise `CI_MAX_OUTPUT_TOKENS` |
 | "AI isn't set up on the server yet" | fill in `GEMINI_API_KEY` and `GEMINI_MODEL` (`docs/AI.md`) |
 | 503 "high demand" from Google | busy: wait and click Retry |
+| "The AI provider's daily request quota is used up" | the key's daily limit is spent (the free tier allows very few requests a day). Wait for the reset it names, turn on billing, or switch `GEMINI_MODEL`. DevPilot stops at once instead of retrying all day |
 | No CI runs listed | click **Sync now** on the GitHub section |

@@ -14,7 +14,12 @@ from app.services.ci.pipeline import (
     request_analysis,
 )
 from app.services.github.client import GitHubClient
-from app.services.llm.errors import LLMAuthError, LLMRateLimited, LLMUnavailable
+from app.services.llm.errors import (
+    LLMAuthError,
+    LLMQuotaExhausted,
+    LLMRateLimited,
+    LLMUnavailable,
+)
 from tests.ci_helpers import (
     FAILED_RUN,
     SECRET,
@@ -197,6 +202,14 @@ def test_a_bad_api_key_fails_without_retrying(env: CiEnv) -> None:
     env.generation.script = [LLMAuthError("nope")]
     assert env.run(final_attempt=False) == "failed"
     assert "API key" in (env.analysis().error or "")
+
+
+def test_a_spent_daily_quota_fails_at_once_with_a_clear_message_and_no_retries(env: CiEnv) -> None:
+    env.generation.script = [LLMQuotaExhausted("daily", retry_after=83974)]
+    assert env.run(final_attempt=False) == "failed"  # not "retry later"
+    a = env.analysis()
+    assert a.status == "failed" and "daily request quota is used up" in (a.error or "")
+    assert "about 23 hours" in (a.error or "") and len(env.generation.requests) == 1
 
 
 def test_github_being_down_is_retried(env: CiEnv) -> None:

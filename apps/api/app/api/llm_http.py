@@ -6,6 +6,7 @@ from app.services.llm.errors import (
     LLMAuthError,
     LLMError,
     LLMNotConfigured,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
 )
@@ -19,6 +20,8 @@ def llm_http_error(exc: LLMError) -> HTTPException:
             status.HTTP_502_BAD_GATEWAY,
             "The AI provider rejected the API key, or the key can't use the configured model.",
         )
+    if isinstance(exc, LLMQuotaExhausted):
+        return HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, exc.user_message())
     if isinstance(exc, LLMRateLimited):
         return HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS, "The AI provider is rate limiting us"

@@ -43,6 +43,12 @@ Built in: per-call timeout (`LLM_TIMEOUT_SECONDS`), retries with backoff on rate
 timeouts and 5xx (`LLM_MAX_ATTEMPTS`), and one `llm_usage` row per operation
 (provider, model, tokens, latency, ok/error). Prompts and replies are never stored.
 
+A spent **daily quota** (for example the free tier's small daily request limit) is different from a
+short rate limit: waiting minutes can't fix it, so it is **not retried**. Reviews, CI analyses and
+indexing fail at once with a clear message, and Ask and the connection test return a 429 that says
+the same, including roughly when it resets if Google says. Fix it by waiting, turning on billing,
+or switching `GEMINI_MODEL` to a model with a bigger allowance.
+
 ## Rules when writing prompts
 
 - Anything from a repository, PR, issue or CI log goes through `untrusted(label, text)` and the

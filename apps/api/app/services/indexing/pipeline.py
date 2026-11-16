@@ -50,6 +50,7 @@ from app.services.llm.errors import (
     LLMBlocked,
     LLMInvalidOutput,
     LLMNotSupported,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMUnavailable,
@@ -200,6 +201,8 @@ def abort_request(db: Session, repo_id: uuid.UUID, run_id: uuid.UUID, message: s
 
 
 def classify(exc: Exception) -> TransientIndexError | IndexFailed | None:
+    if isinstance(exc, LLMQuotaExhausted):  # waiting minutes won't help: say so, don't retry
+        return IndexFailed(exc.user_message())
     if isinstance(exc, LLMRateLimited):
         return TransientIndexError("The AI provider is rate limiting requests.")
     if isinstance(exc, LLMTimeout | LLMUnavailable):

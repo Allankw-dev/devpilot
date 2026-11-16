@@ -9,6 +9,7 @@ from app.services.llm.errors import (
     LLMAuthError,
     LLMInvalidOutput,
     LLMNotSupported,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMToolLoopExceeded,
@@ -62,6 +63,14 @@ def test_rate_limit_wait_is_capped() -> None:
     h = Harness(FakeProvider([LLMRateLimited("slow down", retry_after=9999), reply()]))
     h.service.generate(user_request(), CTX)
     assert h.sleeps == [20.0]
+
+
+def test_a_spent_quota_is_not_retried() -> None:
+    h = Harness(FakeProvider([LLMQuotaExhausted("daily", 60), reply("never reached")]))
+    with pytest.raises(LLMQuotaExhausted):
+        h.service.generate(user_request(), CTX)
+    assert h.sleeps == [] and len(h.provider.requests) == 1
+    assert h.recorder.entries[0].error_code == "quota_exhausted"
 
 
 def test_gives_up_after_max_attempts_and_records_the_failure() -> None:

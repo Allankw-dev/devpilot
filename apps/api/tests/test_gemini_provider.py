@@ -15,6 +15,7 @@ from app.services.llm.errors import (
     LLMBadRequest,
     LLMBlocked,
     LLMInvalidOutput,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMUnavailable,
@@ -327,3 +328,57 @@ def test_embedding_errors_are_translated() -> None:
     p, _ = provider(api_error(genai_errors.ClientError, 429), embedding_model="emb")
     with pytest.raises(LLMRateLimited):
         p.embed(["a"], task="query", timeout=5)
+
+
+# ---------- a spent daily quota is not a short rate limit ----------
+
+
+def quota_error(message: str, *, quota_id: str = "", retry: str | None = None) -> Exception:
+    details: list[dict[str, object]] = []
+    if quota_id:
+        details.append(
+            {
+                "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                "violations": [{"quotaId": quota_id}],
+            }
+        )
+    if retry:
+        details.append({"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": retry})
+    body = {"error": {"code": 429, "message": message, "status": "RESOURCE_EXHAUSTED", "details": details}}
+    return genai_errors.ClientError(429, body)
+
+
+def test_a_per_day_free_tier_limit_is_a_quota_error_with_its_reset_time() -> None:
+    err = quota_error(
+        "Generate content requests per day limit exceeded on Free Tier.",
+        quota_id="GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+        retry="83974s",
+    )
+    p, _ = provider(err)
+    with pytest.raises(LLMQuotaExhausted) as exc:
+        p.generate(ask(), timeout=5)
+    assert exc.value.retry_after == 83974
+
+
+def test_a_zero_allowance_counts_as_a_spent_quota_even_without_a_reset_time() -> None:
+    p, _ = provider(quota_error("Quota exceeded for metric x, limit: 0, model: y"))
+    with pytest.raises(LLMQuotaExhausted) as exc:
+        p.generate(ask(), timeout=5)
+    assert exc.value.retry_after is None
+
+
+def test_a_per_minute_limit_is_still_a_retryable_rate_limit() -> None:
+    err = quota_error(
+        "Quota exceeded for metric x, limit: 15",
+        quota_id="GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+        retry="12s",
+    )
+    p, _ = provider(err)
+    with pytest.raises(LLMRateLimited):
+        p.generate(ask(), timeout=5)
+
+
+def test_quota_errors_from_embeddings_are_translated_too() -> None:
+    p, _ = provider(quota_error("per day limit exceeded"), embedding_model="emb")
+    with pytest.raises(LLMQuotaExhausted):
+        p.embed(["x"], task="document", timeout=5)

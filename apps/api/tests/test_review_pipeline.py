@@ -10,7 +10,13 @@ from app.core.config import Settings
 from app.db.models import LlmUsage, PullRequest, PullRequestReview, ReviewFinding
 from app.services.github.client import GitHubClient
 from app.services.llm import LLMService
-from app.services.llm.errors import LLMAuthError, LLMNotConfigured, LLMRateLimited, LLMUnavailable
+from app.services.llm.errors import (
+    LLMAuthError,
+    LLMNotConfigured,
+    LLMQuotaExhausted,
+    LLMRateLimited,
+    LLMUnavailable,
+)
 from app.services.review.pipeline import (
     TransientReviewError,
     claim_review,
@@ -194,6 +200,14 @@ def test_rejected_api_key_fails_with_a_clear_message_and_no_retry(env: ReviewEnv
     assert env.run(final_attempt=False) == "failed"
     review = env.review()
     assert review.status == "failed" and "rejected the API key" in (review.error or "")
+
+
+def test_a_spent_daily_quota_fails_the_review_at_once_without_retries(env: ReviewEnv) -> None:
+    env.generation.script = [LLMQuotaExhausted("daily", retry_after=7200)]
+    assert env.run(final_attempt=False) == "failed"
+    review = env.review()
+    assert review.status == "failed" and "daily request quota is used up" in (review.error or "")
+    assert "about 2 hours" in (review.error or "")
 
 
 def test_a_rate_limit_leaves_the_review_queued_for_a_retry_then_recovers(env: ReviewEnv) -> None:

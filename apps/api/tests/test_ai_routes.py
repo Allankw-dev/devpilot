@@ -9,7 +9,13 @@ from app.api.deps import get_llm
 from app.core.config import Settings, get_settings
 from app.main import app
 from app.services.llm import LLMService
-from app.services.llm.errors import LLMAuthError, LLMNotConfigured, LLMRateLimited, LLMTimeout
+from app.services.llm.errors import (
+    LLMAuthError,
+    LLMNotConfigured,
+    LLMQuotaExhausted,
+    LLMRateLimited,
+    LLMTimeout,
+)
 from app.services.llm.usage import DbUsageRecorder
 from tests.conftest import Person, World
 from tests.llm_helpers import FakeProvider, reply
@@ -154,6 +160,17 @@ def test_provider_failures_map_to_clean_http_errors(
     assert res.status_code == code
     if must_not_contain:
         assert must_not_contain not in res.text
+
+
+def test_a_spent_daily_quota_says_so_instead_of_a_generic_rate_limit(
+    client: TestClient, world: World, configured: None, fake_llm: FakeProvider
+) -> None:
+    fake_llm.script = [LLMQuotaExhausted("project 9 AIzaSECRET", retry_after=83974)]
+    res = client.post(f"{API}/orgs/{world.org_id}/ai/test", headers=world.owner.headers)
+    assert res.status_code == 429
+    detail = res.json()["detail"]
+    assert "daily request quota is used up" in detail and "about 23 hours" in detail
+    assert "AIza" not in res.text and len(fake_llm.requests) == 1  # not retried
 
 
 def test_connection_test_when_not_configured_is_503_with_names_only(

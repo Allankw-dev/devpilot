@@ -1,7 +1,9 @@
 """Google Gemini through the official `google-genai` SDK."""
 
+import json
 import logging
 import math
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -26,6 +28,7 @@ from app.services.llm.errors import (
     LLMBlocked,
     LLMError,
     LLMInvalidOutput,
+    LLMQuotaExhausted,
     LLMRateLimited,
     LLMTimeout,
     LLMUnavailable,
@@ -60,12 +63,32 @@ def _uses_task_type(model: str) -> bool:
 _MODE = {"auto": "AUTO", "none": "NONE", "required": "ANY"}
 
 
+_RETRY_DELAY = re.compile(r'"retrydelay":\s*"([\d.]+)s"')
+
+
+def _daily_quota_error(exc: Exception, message: str) -> LLMQuotaExhausted | None:
+    """A 429 that says a per-day quota (or a zero allowance) is the problem is not a short rate
+    limit: waiting seconds won't fix it. Returns None for ordinary per-minute limits."""
+    try:
+        details = json.dumps(getattr(exc, "details", None), default=str)
+    except (TypeError, ValueError):
+        details = ""
+    text = f"{message} {details}".lower()
+    if "perday" not in text and "per day" not in text and "limit: 0" not in text:
+        return None
+    found = _RETRY_DELAY.search(text)
+    return LLMQuotaExhausted("Gemini daily quota used up", float(found.group(1)) if found else None)
+
+
 def translate_error(exc: Exception) -> LLMError:
     """Map whatever the SDK (or its HTTP layer) raised onto our error types."""
     if isinstance(exc, genai_errors.APIError):
         code = int(exc.code or 0)
         message = str(getattr(exc, "message", "") or "")
         if code == 429:
+            quota = _daily_quota_error(exc, message)
+            if quota is not None:
+                return quota
             return LLMRateLimited("Gemini rate limit reached")
         if code in (401, 403) or (code == 400 and "api key" in message.lower()):
             return LLMAuthError("Gemini rejected the API key or the key can't use this model")
