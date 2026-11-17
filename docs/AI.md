@@ -49,6 +49,9 @@ indexing fail at once with a clear message, and Ask and the connection test retu
 the same, including roughly when it resets if Google says. Fix it by waiting, turning on billing,
 or switching `GEMINI_MODEL` to a model with a bigger allowance.
 
+The **AI usage** panel on the organization page shows calls, tokens and errors per feature and
+model (`docs/USAGE.md`).
+
 ## Rules when writing prompts
 
 - Anything from a repository, PR, issue or CI log goes through `untrusted(label, text)` and the

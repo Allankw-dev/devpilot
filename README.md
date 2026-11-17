@@ -73,6 +73,11 @@ Click **Analyze** on a failed GitHub Actions run for an AI explanation of what b
 quotes from the logs. Credential-looking lines never reach the model. Nothing is posted to GitHub or
 re-run. See [`docs/CI.md`](docs/CI.md).
 
+## AI usage
+
+See where AI requests, tokens and errors go, per feature and model, and how close you are to your
+provider's daily limit. See [`docs/USAGE.md`](docs/USAGE.md).
+
 ## Ports
 
 DevPilot uses non-default host ports so it doesn't clash with other dev tools

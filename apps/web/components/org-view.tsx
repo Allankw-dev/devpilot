@@ -10,6 +10,7 @@ import { CiRuns } from "@/components/ci-runs";
 import { CodeSearch } from "@/components/code-search";
 import { IndexCell } from "@/components/index-cell";
 import { PullRequests } from "@/components/pull-requests";
+import { UsageDashboard } from "@/components/usage-dashboard";
 import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
@@ -222,6 +223,8 @@ export function OrgView() {
       </section>
 
       {org.data && <AiPanel orgId={orgId} isAdmin={isAdmin} />}
+
+      {org.data && <UsageDashboard orgId={orgId} />}
 
       {repos.data && repos.data.length > 0 && (
         <section className="mt-10">

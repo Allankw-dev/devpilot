@@ -195,8 +195,37 @@ export interface AiTestResult {
   reply: string;
 }
 
+export interface AiUsageRow {
+  operations: number;
+  provider_calls: number; // what the provider counts: retries included
+  errors: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface AiUsageDetail extends AiUsageRow {
+  days: number;
+  since: string;
+  avg_latency_ms: number | null;
+  calls_last_24h: number;
+  daily_limit: number | null; // AI_DAILY_REQUEST_LIMIT, when the server has it set
+  quota_hit_at: string | null; // last time the provider said a daily quota was used up
+  by_day: (AiUsageRow & { day: string })[];
+  by_feature: (AiUsageRow & { feature: string })[];
+  by_model: {
+    model: string;
+    operations: number;
+    provider_calls: number;
+    errors: number;
+    calls_last_24h: number;
+  }[];
+  errors_by_code: { code: string; count: number }[];
+}
+
 export const aiApi = {
   status: (token: string, orgId: string) => authed<AiStatus>(`/orgs/${orgId}/ai`, token),
+  usage: (token: string, orgId: string, days: number) =>
+    authed<AiUsageDetail>(`/orgs/${orgId}/ai/usage?days=${days}`, token),
   test: (token: string, orgId: string) =>
     authed<AiTestResult>(`/orgs/${orgId}/ai/test`, token, { method: "POST" }),
 };

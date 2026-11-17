@@ -1,4 +1,5 @@
 import uuid
+from datetime import date as Date
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -196,6 +197,55 @@ class AiStatusOut(BaseModel):
     embeddings_configured: bool
     missing: list[str]  # names of unset settings; only shown to admins
     usage: AiUsageOut
+
+
+class AiUsageDayOut(BaseModel):
+    day: Date  # UTC
+    operations: int
+    provider_calls: int  # what the provider counts: retries included
+    errors: int
+    input_tokens: int
+    output_tokens: int
+
+
+class AiUsageFeatureOut(BaseModel):
+    feature: str
+    operations: int
+    provider_calls: int
+    errors: int
+    input_tokens: int
+    output_tokens: int
+
+
+class AiUsageModelOut(BaseModel):
+    model: str
+    operations: int
+    provider_calls: int
+    errors: int
+    calls_last_24h: int  # daily quotas are usually per model
+
+
+class AiUsageErrorOut(BaseModel):
+    code: str  # e.g. quota_exhausted, rate_limited, unavailable
+    count: int
+
+
+class AiUsageDetailOut(BaseModel):
+    days: int
+    since: Date  # first day shown (UTC)
+    operations: int
+    provider_calls: int
+    errors: int
+    input_tokens: int
+    output_tokens: int
+    avg_latency_ms: int | None  # successful operations only
+    calls_last_24h: int  # across all models
+    daily_limit: int | None  # AI_DAILY_REQUEST_LIMIT, when set
+    quota_hit_at: datetime | None  # last time the provider said a daily quota was used up
+    by_day: list[AiUsageDayOut]
+    by_feature: list[AiUsageFeatureOut]
+    by_model: list[AiUsageModelOut]
+    errors_by_code: list[AiUsageErrorOut]
 
 
 class AiTestOut(BaseModel):
