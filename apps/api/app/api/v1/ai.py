@@ -1,15 +1,15 @@
 import logging
 import time
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import ColumnElement, case, func, select
-from sqlalchemy.orm import Session
 
 from app.api.deps import AdminCtx, AnyMember, DbSession, get_llm
 from app.api.llm_http import llm_http_error
 from app.core.config import Settings, get_settings
+from app.core.daybucket import day_bucket, to_date
 from app.core.roles import Role, at_least
 from app.db.models import LlmUsage
 from app.schemas import (
@@ -100,21 +100,6 @@ def _aware(value: datetime | None) -> datetime | None:
     return value
 
 
-def _day_bucket(db: Session) -> ColumnElement[object]:
-    """The UTC calendar day of a usage row, on either database."""
-    if db.get_bind().dialect.name == "postgresql":
-        return func.date(func.timezone("UTC", LlmUsage.created_at))
-    return func.date(LlmUsage.created_at)
-
-
-def _to_date(value: object) -> date:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    return date.fromisoformat(str(value)[:10])  # SQLite gives text
-
-
 def _errors_sum() -> ColumnElement[int]:
     return func.coalesce(func.sum(case((LlmUsage.status == "error", 1), else_=0)), 0)
 
@@ -133,9 +118,9 @@ def ai_usage(
     since = datetime(first_day.year, first_day.month, first_day.day, tzinfo=UTC)
     mine = (LlmUsage.org_id == ctx.org.id, LlmUsage.created_at >= since)
 
-    day = _day_bucket(db)
+    day = day_bucket(db, LlmUsage.created_at)
     per_day = {
-        _to_date(row[0]): row
+        to_date(row[0]): row
         for row in db.execute(
             select(
                 day,

@@ -73,6 +73,14 @@ Click **Analyze** on a failed GitHub Actions run for an AI explanation of what b
 quotes from the logs. Credential-looking lines never reach the model. Nothing is posted to GitHub or
 re-run. See [`docs/CI.md`](docs/CI.md).
 
+## Status and architecture
+
+What works, what doesn't and the latest test results: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+How the code is organized: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). What changed and when:
+[`docs/DEVELOPMENT_LOG.md`](docs/DEVELOPMENT_LOG.md).
+
+Web tests: `cd apps/web; npm test`.
+
 ## AI usage
 
 See where AI requests, tokens and errors go, per feature and model, and how close you are to your

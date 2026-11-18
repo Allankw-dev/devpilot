@@ -2,36 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark is the default theme. A light theme is available through the `.light` class on <html>.
+   Values are HSL triplets so Tailwind can add opacity. */
 @layer base {
   :root {
-    --background: 220 20% 98%;
-    --foreground: 222 30% 12%;
-    --muted: 220 16% 94%;
-    --muted-foreground: 220 10% 40%;
-    --border: 220 14% 86%;
-    --primary: 231 70% 46%;
-    --primary-foreground: 0 0% 100%;
-    --success: 152 60% 28%;
-    --danger: 4 70% 42%;
+    --background: 225 43% 5%; /* #080B14 */
+    --sidebar: 225 45% 9%; /* #0C1120 */
+    --card: 221 39% 11%; /* #111827 */
+    --elevated: 221 38% 15%; /* #172033 */
+    --foreground: 210 40% 98%; /* #F8FAFC */
+    --muted: 221 38% 15%; /* subtle fills: same as elevated */
+    --muted-foreground: 215 20% 65%; /* #94A3B8 */
+    --border: 218 30% 21%; /* #263247 */
+    --primary: 217 91% 60%; /* #3B82F6 */
+    --primary-foreground: 225 43% 5%; /* dark text: white on this blue is below 4.5:1 */
+    --purple: 258 90% 66%; /* #8B5CF6 */
+    --cyan: 189 94% 43%; /* #06B6D4 */
+    --success: 160 84% 39%; /* #10B981 */
+    --warning: 38 92% 50%; /* #F59E0B */
+    --danger: 0 84% 60%; /* #EF4444 */
+    color-scheme: dark;
   }
 
-  .dark {
-    --background: 222 28% 8%;
-    --foreground: 220 20% 94%;
-    --muted: 222 20% 14%;
-    --muted-foreground: 220 10% 64%;
-    --border: 222 16% 22%;
-    --primary: 231 85% 72%;
-    --primary-foreground: 222 28% 8%;
-    --success: 152 55% 55%;
-    --danger: 4 80% 68%;
+  .light {
+    --background: 210 40% 98%;
+    --sidebar: 0 0% 100%;
+    --card: 0 0% 100%;
+    --elevated: 210 40% 96%;
+    --foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 19% 35%;
+    --border: 214 32% 91%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --purple: 262 83% 58%;
+    --cyan: 193 82% 31%;
+    --success: 163 94% 24%;
+    --warning: 26 90% 37%;
+    --danger: 0 74% 42%;
+    color-scheme: light;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

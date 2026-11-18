@@ -9,6 +9,7 @@ import { AskPanel } from "@/components/ask-panel";
 import { CiRuns } from "@/components/ci-runs";
 import { CodeSearch } from "@/components/code-search";
 import { IndexCell } from "@/components/index-cell";
+import { PageHeader } from "@/components/page-header";
 import { PullRequests } from "@/components/pull-requests";
 import { UsageDashboard } from "@/components/usage-dashboard";
 import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
@@ -104,18 +105,18 @@ export function OrgView() {
   const mutationError = [connect, sync, disconnect].find((m) => m.isError)?.error;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
-        ← Organizations
-      </Link>
-      <header className="mt-4 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{org.data?.name ?? "…"}</h1>
-        {org.data && (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
-            {org.data.role}
-          </span>
-        )}
-      </header>
+    <div>
+      <PageHeader
+        title={org.data?.name ?? "Workspace"}
+        description="GitHub, pull requests, CI and AI for this organization."
+        actions={
+          org.data && (
+            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
+              {org.data.role}
+            </span>
+          )
+        }
+      />
 
       {overview.data && (
         <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Summary">
@@ -308,6 +309,6 @@ export function OrgView() {
           </ul>
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -455,3 +455,79 @@ class CiAnalysisOut(BaseModel):
     finished_at: datetime | None
     error: str | None
     stale: bool
+
+
+# ---------- dashboard ----------
+
+
+class DashboardStatsOut(BaseModel):
+    repositories: int
+    open_pull_requests: int
+    open_issues: int
+    reviews_completed: int  # finished AI reviews in the period
+    ci_analyses_completed: int  # finished CI analyses in the period
+    failed_runs: int  # workflow runs that failed or timed out in the period
+
+
+class DashboardDayOut(BaseModel):
+    day: Date  # UTC
+    commits: int
+    pull_requests_opened: int
+
+
+class DashboardPullRequestOut(BaseModel):
+    id: uuid.UUID
+    repository: str
+    number: int
+    title: str
+    author: str | None
+    draft: bool
+    html_url: str
+    updated_at: datetime | None
+
+
+class DashboardIssueOut(BaseModel):
+    id: uuid.UUID
+    repository: str
+    number: int
+    title: str
+    author: str | None
+    comments: int
+    html_url: str
+    updated_at: datetime | None
+
+
+class DashboardReviewOut(BaseModel):
+    id: uuid.UUID
+    pull_request_id: uuid.UUID
+    repository: str
+    number: int
+    title: str
+    status: str  # queued | running | ready | failed
+    open_findings: int
+    serious_findings: int  # critical or high
+    finished_at: datetime | None
+
+
+class DashboardRunOut(BaseModel):
+    id: uuid.UUID
+    repository: str
+    name: str | None
+    branch: str | None
+    conclusion: str | None
+    html_url: str | None
+    updated_at: datetime | None
+    analysis_status: str | None  # latest AI analysis of this run, if any
+
+
+class DashboardOut(BaseModel):
+    days: int
+    since: Date
+    github_connected: bool  # at least one GitHub installation is connected
+    last_synced_at: datetime | None
+    stats: DashboardStatsOut
+    activity: list[DashboardDayOut]
+    recent_pull_requests: list[DashboardPullRequestOut]
+    recent_reviews: list[DashboardReviewOut]
+    recent_failed_runs: list[DashboardRunOut]
+    open_issues: list[DashboardIssueOut]

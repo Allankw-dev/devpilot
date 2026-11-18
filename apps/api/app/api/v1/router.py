@@ -4,6 +4,7 @@ from app.api.v1 import (
     ai,
     ask,
     ci,
+    dashboard,
     github,
     health,
     indexing,
@@ -26,5 +27,6 @@ api_router.include_router(github.router)
 api_router.include_router(indexing.router)
 api_router.include_router(reviews.router)
 api_router.include_router(ci.router)
+api_router.include_router(dashboard.router)
 api_router.include_router(repos.router)
 api_router.include_router(webhooks.router)

@@ -434,3 +434,68 @@ export const ciApi = {
       body: JSON.stringify({ force }),
     }),
 };
+
+
+// ---------- dashboard ----------
+
+export interface DashboardData {
+  days: number;
+  since: string;
+  github_connected: boolean;
+  last_synced_at: string | null;
+  stats: {
+    repositories: number;
+    open_pull_requests: number;
+    open_issues: number;
+    reviews_completed: number; // finished AI reviews in the period
+    ci_analyses_completed: number; // finished CI analyses in the period
+    failed_runs: number; // workflow runs that failed or timed out in the period
+  };
+  activity: { day: string; commits: number; pull_requests_opened: number }[];
+  recent_pull_requests: {
+    id: string;
+    repository: string;
+    number: number;
+    title: string;
+    author: string | null;
+    draft: boolean;
+    html_url: string;
+    updated_at: string | null;
+  }[];
+  recent_reviews: {
+    id: string;
+    pull_request_id: string;
+    repository: string;
+    number: number;
+    title: string;
+    status: "queued" | "running" | "ready" | "failed";
+    open_findings: number;
+    serious_findings: number;
+    finished_at: string | null;
+  }[];
+  recent_failed_runs: {
+    id: string;
+    repository: string;
+    name: string | null;
+    branch: string | null;
+    conclusion: string | null;
+    html_url: string | null;
+    updated_at: string | null;
+    analysis_status: "queued" | "running" | "ready" | "failed" | null;
+  }[];
+  open_issues: {
+    id: string;
+    repository: string;
+    number: number;
+    title: string;
+    author: string | null;
+    comments: number;
+    html_url: string;
+    updated_at: string | null;
+  }[];
+}
+
+export const dashboardApi = {
+  get: (token: string, orgId: string, days: number) =>
+    authed<DashboardData>(`/orgs/${orgId}/dashboard?days=${days}`, token),
+};
