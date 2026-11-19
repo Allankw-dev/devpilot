@@ -118,24 +118,8 @@ def _check_review_rate(db: Session, user_id: uuid.UUID, per_minute: int) -> None
 # ---------- routes ----------
 
 
-@router.get("/orgs/{org_id}/pull-requests", response_model=list[PullRequestOut])
-def list_pull_requests(
-    ctx: AnyMember,
-    db: DbSession,
-    state: Literal["open", "all"] = "open",
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
-) -> list[PullRequestOut]:
-    stmt = (
-        select(PullRequest, Repository.full_name)
-        .join(Repository, Repository.id == PullRequest.repo_id)
-        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
-        .where(GithubInstallation.org_id == ctx.org.id)
-        .order_by(PullRequest.gh_updated_at.desc().nulls_last(), PullRequest.number.desc())
-        .limit(limit)
-    )
-    if state == "open":
-        stmt = stmt.where(PullRequest.state == "open")
-    rows = db.execute(stmt).all()
+def _pull_request_rows(db: Session, rows: list[tuple[PullRequest, str]]) -> list[PullRequestOut]:
+    """Pull requests with a summary of their newest AI review."""
     ids = [pr.id for pr, _ in rows]
 
     newest: dict[uuid.UUID, PullRequestReview] = {}
@@ -190,6 +174,44 @@ def list_pull_requests(
             )
         )
     return out
+
+
+@router.get("/orgs/{org_id}/pull-requests", response_model=list[PullRequestOut])
+def list_pull_requests(
+    ctx: AnyMember,
+    db: DbSession,
+    state: Literal["open", "all"] = "open",
+    repo_id: uuid.UUID | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+) -> list[PullRequestOut]:
+    """Pull requests, most recently updated first. `q` matches the title."""
+    stmt = (
+        select(PullRequest, Repository.full_name)
+        .join(Repository, Repository.id == PullRequest.repo_id)
+        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
+        .where(GithubInstallation.org_id == ctx.org.id)
+        .order_by(PullRequest.gh_updated_at.desc().nulls_last(), PullRequest.number.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    if state == "open":
+        stmt = stmt.where(PullRequest.state == "open")
+    if repo_id is not None:
+        stmt = stmt.where(PullRequest.repo_id == repo_id)
+    if q and q.strip():
+        needle = q.strip().lower()
+        stmt = stmt.where(func.lower(PullRequest.title).contains(needle, autoescape=True))
+    return _pull_request_rows(db, [(pr, name) for pr, name in db.execute(stmt).all()])
+
+
+@router.get("/orgs/{org_id}/pull-requests/{pr_id}", response_model=PullRequestOut)
+def get_pull_request(pr_id: uuid.UUID, ctx: AnyMember, db: DbSession) -> PullRequestOut:
+    pr = _pr_in_org(db, ctx.org.id, pr_id)
+    repo = db.get(Repository, pr.repo_id)
+    assert repo is not None  # the foreign key guarantees it
+    return _pull_request_rows(db, [(pr, repo.full_name)])[0]
 
 
 @router.get("/orgs/{org_id}/pull-requests/{pr_id}/review", response_model=ReviewOut | None)

@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone A**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone B**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,9 +11,9 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 670 passed, 14 skipped (the skipped ones need PostgreSQL) |
-| API on PostgreSQL 16 + pgvector | 682 passed, 2 skipped |
-| Web (Vitest) | 33 passed |
+| API on SQLite | 679 passed, 14 skipped (the skipped ones need PostgreSQL) |
+| API on PostgreSQL 16 + pgvector | 691 passed, 2 skipped |
+| Web (Vitest) | 83 passed |
 | Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -31,8 +31,9 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)
-- [ ] Routed pages from the brief: repositories, assistant, code reviews, CI/CD, analytics,
-      integrations, team, settings. Today the working features live on one **Workspace** page
+- [x] Routed pages: Dashboard, Repositories (list and detail), Code Reviews (list and detail)
+- [ ] Routed pages still to build: assistant, CI/CD, analytics, integrations, team, settings.
+      Until then those features live on the **Workspace** page
 - [ ] shadcn/ui components beyond Button and Card, Monaco, React Hook Form, Zod, React Flow
 - [ ] Playwright end-to-end tests
 - [ ] Invitations
@@ -45,7 +46,9 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] Commits, issues, pull requests, workflow runs, pull request diffs
 - [x] Webhooks with signature check, idempotent delivery handling
 - [x] Disconnect and suspended-installation handling
-- [ ] Branch listing and per-repository pages
+- [x] Repository pages: searchable, filterable, paged list; detail with overview, commits,
+      pull requests and issues
+- [ ] Branch listing, file browser and Monaco code viewer (needs live GitHub reads, to be designed)
 - [ ] Rate-limit backoff is handled for retries; no dedicated dashboard for it
 
 ## Brief phase 3: AI codebase assistant: partly done
@@ -63,6 +66,8 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] Pull request review with findings: file, lines, severity, confidence, explanation
 - [x] Findings checked against the real diff (invented paths and lines are dropped)
 - [x] Credential scanner on the diff
+- [x] Review pages: pull request list with filters, and a review detail page with findings
+- [ ] Changed-files list and diff viewer on the review page
 - [ ] Ruff and Semgrep findings feeding the review
 - [ ] Publishing comments to GitHub after approval (needs a write permission, a separate decision)
 

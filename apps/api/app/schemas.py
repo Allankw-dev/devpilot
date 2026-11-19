@@ -141,6 +141,8 @@ class IndexOut(BaseModel):
 class RepoOut(BaseModel):
     id: uuid.UUID
     full_name: str
+    owner: str
+    description: str | None
     private: bool
     archived: bool
     language: str | None
@@ -531,3 +533,20 @@ class DashboardOut(BaseModel):
     recent_reviews: list[DashboardReviewOut]
     recent_failed_runs: list[DashboardRunOut]
     open_issues: list[DashboardIssueOut]
+
+
+# ---------- issues ----------
+
+
+class IssueOut(BaseModel):
+    id: uuid.UUID
+    repository_id: uuid.UUID
+    repository: str
+    number: int
+    title: str
+    state: str  # open | closed
+    author: str | None
+    comments: int
+    html_url: str
+    created_at: datetime | None
+    updated_at: datetime | None

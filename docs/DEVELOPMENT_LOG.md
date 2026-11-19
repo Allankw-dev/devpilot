@@ -3,6 +3,26 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Phase 10, milestone B: Repositories and Code Reviews pages
+
+- **Repositories** (`/repositories`): search by name or description, language and CI filters, an
+  archived toggle, 10 per page. Rows link to the repository page.
+- **Repository page** (`/repositories/[id]`): overview facts and code-index control, commits,
+  pull requests (with review actions) and issues. Tabs are links (`?tab=`), so they can be shared.
+- **Code reviews** (`/code-reviews`, `/code-reviews/[id]`): pull requests with review status,
+  repository filter, title search, "load more", and a detail page showing the findings.
+- API: `GET /orgs/{id}/repos/{repo}/commits`, `GET /orgs/{id}/issues`,
+  `GET /orgs/{id}/pull-requests/{pr}`; pull request list gained `repo_id`, `q` and `offset`;
+  repository list gained `owner` and `description`. Search treats `%` and `_` literally.
+  No migration.
+- Starting a review or indexing is always a deliberate click by a member or above (it costs AI
+  tokens); viewers see results only.
+- Renamed `vitest.config.ts` to `.mts` to silence a Vite loader warning.
+- Verified: API 679 passed on SQLite, 691 on PostgreSQL; web 83 passed; ruff, mypy, ESLint, `tsc`
+  and the production build clean. **Not** verified: a real browser or phone screen, end-to-end flows.
+- Open: file browser with Monaco (needs live GitHub reads and secret filtering for display),
+  branches, review diff viewer, then CI/CD, analytics, integrations, team and settings pages.
+
 ## Phase 10, milestone A: app shell and design system
 
 - New design tokens (dark-first palette from the brief, light theme), self-hosted Inter and

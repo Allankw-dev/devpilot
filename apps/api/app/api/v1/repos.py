@@ -1,7 +1,7 @@
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
@@ -103,6 +103,8 @@ def list_repos(ctx: AnyMember, db: DbSession) -> list[RepoOut]:
         RepoOut(
             id=r.id,
             full_name=r.full_name,
+            owner=r.owner_login,
+            description=r.description,
             private=r.private,
             archived=r.archived,
             language=r.language,
@@ -159,3 +161,39 @@ def overview(ctx: AnyMember, db: DbSession) -> OverviewOut:
         ),
         recent_commits=commits,
     )
+
+
+@router.get("/orgs/{org_id}/repos/{repo_id}/commits", response_model=list[CommitOut])
+def repo_commits(
+    repo_id: uuid.UUID,
+    ctx: AnyMember,
+    db: DbSession,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+) -> list[CommitOut]:
+    """The stored commits of one repository, newest first."""
+    repo = db.scalar(
+        select(Repository)
+        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
+        .where(Repository.id == repo_id, GithubInstallation.org_id == ctx.org.id)
+    )
+    if repo is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Repository not found")
+    rows = db.scalars(
+        select(Commit)
+        .where(Commit.repo_id == repo.id)
+        .order_by(Commit.committed_at.desc().nulls_last(), Commit.sha)
+        .limit(limit)
+        .offset(offset)
+    )
+    return [
+        CommitOut(
+            sha=c.sha,
+            message=c.message_headline,
+            author=c.author_login or c.author_name,
+            repository=repo.full_name,
+            committed_at=c.committed_at,
+            url=c.html_url,
+        )
+        for c in rows
+    ]

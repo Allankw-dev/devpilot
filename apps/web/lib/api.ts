@@ -117,6 +117,8 @@ export interface RepoIndex {
 export interface Repo {
   id: string;
   full_name: string;
+  owner: string;
+  description: string | null;
   private: boolean;
   archived: boolean;
   language: string | null;
@@ -344,9 +346,29 @@ export interface Review {
   findings: Finding[];
 }
 
+/** Filters and paging shared by the list endpoints. */
+export interface PageOptions {
+  repoId?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+function query(params: Record<string, string | number | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === "") continue;
+    sp.set(k === "repoId" ? "repo_id" : k, String(v));
+  }
+  const text = sp.toString();
+  return text ? `?${text}` : "";
+}
+
 export const reviewApi = {
-  list: (token: string, orgId: string, state: "open" | "all") =>
-    authed<PullRequestRow[]>(`/orgs/${orgId}/pull-requests?state=${state}`, token),
+  list: (token: string, orgId: string, state: "open" | "all", opts: PageOptions = {}) =>
+    authed<PullRequestRow[]>(`/orgs/${orgId}/pull-requests${query({ state, ...opts })}`, token),
+  pull: (token: string, orgId: string, prId: string) =>
+    authed<PullRequestRow>(`/orgs/${orgId}/pull-requests/${prId}`, token),
   get: (token: string, orgId: string, prId: string) =>
     authed<Review | null>(`/orgs/${orgId}/pull-requests/${prId}/review`, token),
   start: (token: string, orgId: string, prId: string, force: boolean) =>
@@ -498,4 +520,44 @@ export interface DashboardData {
 export const dashboardApi = {
   get: (token: string, orgId: string, days: number) =>
     authed<DashboardData>(`/orgs/${orgId}/dashboard?days=${days}`, token),
+};
+
+
+// ---------- repositories: commits and issues ----------
+
+export interface CommitRow {
+  sha: string;
+  message: string;
+  author: string | null;
+  repository: string;
+  committed_at: string | null;
+  url: string | null;
+}
+
+export interface IssueRow {
+  id: string;
+  repository_id: string;
+  repository: string;
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  author: string | null;
+  comments: number;
+  html_url: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const repoApi = {
+  commits: (token: string, orgId: string, repoId: string, opts: { limit?: number; offset?: number }) =>
+    authed<CommitRow[]>(`/orgs/${orgId}/repos/${repoId}/commits${query(opts)}`, token),
+};
+
+export const issueApi = {
+  list: (
+    token: string,
+    orgId: string,
+    state: "open" | "closed" | "all",
+    opts: PageOptions = {},
+  ) => authed<IssueRow[]>(`/orgs/${orgId}/issues${query({ state, ...opts })}`, token),
 };

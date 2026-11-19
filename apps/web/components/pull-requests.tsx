@@ -3,32 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { ReviewBadge } from "@/components/review-badge";
 import { ReviewPanel } from "@/components/review-panel";
 import { ApiError, reviewApi, type PullRequestRow } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
 import { cn } from "@/lib/utils";
-
-function ReviewBadge({ row }: { row: PullRequestRow }) {
-  const r = row.review;
-  if (!r) return <span className="text-xs text-muted-foreground">Not reviewed</span>;
-  if (r.status === "queued" || r.status === "running")
-    return <span className="text-xs text-muted-foreground">{r.status === "queued" ? "Queued…" : "Reviewing…"}</span>;
-  if (r.status === "failed") return <span className="text-xs text-danger">Review failed</span>;
-  return (
-    <span className="text-xs">
-      <span className={cn("font-semibold", r.risk === "high" && "text-danger", r.risk === "low" && "text-success")}>
-        {r.risk ?? "?"} risk
-      </span>
-      <span className="text-muted-foreground">
-        {" "}
-        · {r.open_findings} {r.open_findings === 1 ? "finding" : "findings"}
-        {r.serious_findings > 0 && <span className="text-danger"> ({r.serious_findings} serious)</span>}
-        {r.stale && " · changed since"}
-      </span>
-    </span>
-  );
-}
 
 export function PullRequests({ orgId, canReview }: { orgId: string; canReview: boolean }) {
   const queryClient = useQueryClient();

@@ -22,7 +22,7 @@ describe("navigation", () => {
   });
 
   it("marks exactly one item active for each page", () => {
-    for (const path of ["/dashboard", "/orgs/org-1"]) {
+    for (const path of ["/dashboard", "/orgs/org-1", "/repositories", "/repositories/r1", "/code-reviews", "/code-reviews/p1"]) {
       expect(NAV_ITEMS.filter((i) => i.match(path))).toHaveLength(1);
     }
     expect(NAV_ITEMS.filter((i) => i.match("/somewhere-else"))).toHaveLength(0);
@@ -31,6 +31,8 @@ describe("navigation", () => {
   it("names the current page for the breadcrumb", () => {
     expect(titleFor("/dashboard")).toBe("Dashboard");
     expect(titleFor("/orgs/org-1")).toBe("Workspace");
+    expect(titleFor("/repositories/r1")).toBe("Repositories");
+    expect(titleFor("/code-reviews")).toBe("Code Reviews");
     expect(titleFor("/nowhere")).toBe("");
   });
 });
