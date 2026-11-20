@@ -340,3 +340,48 @@ def test_the_ci_task_asks_for_a_delayed_retry_on_a_rate_limit(
         set_resources(None)
     assert asked == [tasks.retry_delay(0)]
     assert env.analysis().status == "queued"  # waiting for the retry, not failed
+
+
+# ---------- filters, paging and a single run (the CI/CD pages) ----------
+
+
+def test_runs_can_be_filtered_by_repository_and_searched_and_paged(env: CiEnv) -> None:
+    all_rows = listing(env, state="all")
+    repo_id = all_rows[0]["repository_id"]
+    assert {r["repository_id"] for r in listing(env, state="all", repo_id=repo_id)} == {repo_id}
+    assert listing(env, state="all", repo_id=str(uuid.uuid4())) == []
+    assert len(listing(env, state="all", limit="2")) == 2
+    first = listing(env, state="all", limit="1", offset="0")[0]["id"]
+    second = listing(env, state="all", limit="1", offset="1")[0]["id"]
+    assert first != second
+    assert listing(env, state="all", offset="50") == []
+
+
+def test_run_search_matches_workflow_name_or_branch_ignoring_case_and_wildcards(env: CiEnv) -> None:
+    assert len(listing(env, state="all", q="ci")) == len(listing(env, state="all"))  # every run is named CI
+    assert len(listing(env, state="all", q="MAIN")) == len(listing(env, state="all"))  # on branch main
+    assert listing(env, state="all", q="nothing-like-this") == []
+    assert listing(env, state="all", q="%") == []  # a literal percent sign, not "match everything"
+    for bad in ({"offset": "-1"}, {"q": "x" * 101}):
+        res = env.client.get(
+            f"{API}/orgs/{env.world.org_id}/ci-runs", params=bad, headers=env.world.owner.headers
+        )
+        assert res.status_code == 422
+
+
+def test_one_run_comes_with_its_analysis_summary(env: CiEnv, person: PersonFactory) -> None:
+    url = f"{API}/orgs/{env.world.org_id}/ci-runs/{env.runs[FAILED_RUN]}"
+    res = env.client.get(url, headers=env.world.owner.headers)
+    assert res.status_code == 200 and res.json()["analyzable"] is True and res.json()["analysis"] is None
+
+    env.script(analysis_json())
+    assert start(env).status_code == 202
+    shown = env.client.get(url, headers=env.world.owner.headers).json()
+    assert shown["analysis"]["status"] == "ready" and shown["analysis"]["category"] == "test_failure"
+    assert shown["repository"] == "octo-org/web" and shown["branch"] == "main"
+
+    assert env.client.get(f"{API}/orgs/{env.world.org_id}/ci-runs/{uuid.uuid4()}", headers=env.world.owner.headers).status_code == 404
+    mallory = person("mallory@example.com")
+    other = env.client.post(f"{API}/orgs", json={"name": "Evil"}, headers=mallory.headers).json()
+    cross = f"{API}/orgs/{other['id']}/ci-runs/{env.runs[FAILED_RUN]}"
+    assert env.client.get(cross, headers=mallory.headers).status_code == 404

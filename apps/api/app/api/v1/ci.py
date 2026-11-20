@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AnyMember, DbSession, JobsDep, MemberCtx
@@ -109,28 +109,9 @@ def _check_rate(db: Session, user_id: uuid.UUID, per_minute: int) -> None:
 # ---------- routes ----------
 
 
-@router.get("/orgs/{org_id}/ci-runs", response_model=list[CiRunOut])
-def list_ci_runs(
-    ctx: AnyMember,
-    db: DbSession,
-    state: Literal["failed", "all"] = "failed",
-    limit: Annotated[int, Query(ge=1, le=100)] = 30,
-) -> list[CiRunOut]:
-    stmt = (
-        select(WorkflowRun, Repository.full_name)
-        .join(Repository, Repository.id == WorkflowRun.repo_id)
-        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
-        .where(GithubInstallation.org_id == ctx.org.id)
-        .order_by(WorkflowRun.gh_created_at.desc().nulls_last(), WorkflowRun.run_id.desc())
-        .limit(limit)
-    )
-    if state == "failed":
-        stmt = stmt.where(
-            WorkflowRun.status == "completed", WorkflowRun.conclusion.in_(ANALYZABLE_CONCLUSIONS)
-        )
-    rows = db.execute(stmt).all()
+def _run_rows(db: Session, rows: list[tuple[WorkflowRun, str]]) -> list[CiRunOut]:
+    """Workflow runs with a summary of their newest AI analysis."""
     ids = [run.id for run, _ in rows]
-
     newest: dict[uuid.UUID, CiAnalysis] = {}
     if ids:
         for analysis in db.scalars(
@@ -172,6 +153,53 @@ def list_ci_runs(
             )
         )
     return out
+
+
+@router.get("/orgs/{org_id}/ci-runs", response_model=list[CiRunOut])
+def list_ci_runs(
+    ctx: AnyMember,
+    db: DbSession,
+    state: Literal["failed", "all"] = "failed",
+    repo_id: uuid.UUID | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+) -> list[CiRunOut]:
+    """Workflow runs, newest first. `q` matches the workflow name or the branch."""
+    stmt = (
+        select(WorkflowRun, Repository.full_name)
+        .join(Repository, Repository.id == WorkflowRun.repo_id)
+        .join(GithubInstallation, GithubInstallation.id == Repository.installation_id)
+        .where(GithubInstallation.org_id == ctx.org.id)
+        .order_by(WorkflowRun.gh_created_at.desc().nulls_last(), WorkflowRun.run_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    if state == "failed":
+        stmt = stmt.where(
+            WorkflowRun.status == "completed", WorkflowRun.conclusion.in_(ANALYZABLE_CONCLUSIONS)
+        )
+    if repo_id is not None:
+        stmt = stmt.where(WorkflowRun.repo_id == repo_id)
+    if q and q.strip():
+        needle = q.strip().lower()
+        stmt = stmt.where(
+            or_(
+                func.lower(func.coalesce(WorkflowRun.name, "")).contains(needle, autoescape=True),
+                func.lower(func.coalesce(WorkflowRun.head_branch, "")).contains(
+                    needle, autoescape=True
+                ),
+            )
+        )
+    return _run_rows(db, [(run, name) for run, name in db.execute(stmt).all()])
+
+
+@router.get("/orgs/{org_id}/ci-runs/{run_pk}", response_model=CiRunOut)
+def get_ci_run(run_pk: uuid.UUID, ctx: AnyMember, db: DbSession) -> CiRunOut:
+    run = _run_in_org(db, ctx.org.id, run_pk)
+    repo = db.get(Repository, run.repo_id)
+    assert repo is not None  # the foreign key guarantees it
+    return _run_rows(db, [(run, repo.full_name)])[0]
 
 
 @router.get("/orgs/{org_id}/ci-runs/{run_pk}/analysis", response_model=CiAnalysisOut | None)

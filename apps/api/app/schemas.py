@@ -550,3 +550,33 @@ class IssueOut(BaseModel):
     html_url: str
     created_at: datetime | None
     updated_at: datetime | None
+
+
+# ---------- analytics ----------
+
+
+class AnalyticsDayOut(BaseModel):
+    day: Date  # UTC
+    reviews_finished: int
+    ci_analyses_finished: int
+    runs_succeeded: int
+    runs_failed: int  # failure or timed out
+
+
+class AnalyticsSeverityOut(BaseModel):
+    severity: str  # critical | high | medium | low | info
+    count: int
+
+
+class AnalyticsOut(BaseModel):
+    days: int
+    since: Date
+    reviews_finished: int
+    ci_analyses_finished: int
+    runs_succeeded: int
+    runs_failed: int
+    ci_success_rate: float | None  # succeeded / (succeeded + failed); None when there were none
+    avg_review_seconds: int | None  # from start to finish, finished reviews only
+    avg_ci_analysis_seconds: int | None
+    findings_by_severity: list[AnalyticsSeverityOut]  # every severity, even when zero
+    by_day: list[AnalyticsDayOut]

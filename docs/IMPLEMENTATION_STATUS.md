@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone B**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone C**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,9 +11,9 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 679 passed, 14 skipped (the skipped ones need PostgreSQL) |
-| API on PostgreSQL 16 + pgvector | 691 passed, 2 skipped |
-| Web (Vitest) | 83 passed |
+| API on SQLite | 690 passed, 14 skipped (the skipped ones need PostgreSQL) |
+| API on PostgreSQL 16 + pgvector | 702 passed, 2 skipped |
+| Web (Vitest) | 128 passed |
 | Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -31,9 +31,9 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)
-- [x] Routed pages: Dashboard, Repositories (list and detail), Code Reviews (list and detail)
-- [ ] Routed pages still to build: assistant, CI/CD, analytics, integrations, team, settings.
-      Until then those features live on the **Workspace** page
+- [x] Routed pages: Dashboard, Repositories, Code Reviews, CI/CD, Analytics, Integrations
+- [ ] Routed pages still to build: assistant (Ask and code search), team, settings. Until then those
+      live on the **Workspace** page, which also still repeats some of the new pages' content
 - [ ] shadcn/ui components beyond Button and Card, Monaco, React Hook Form, Zod, React Flow
 - [ ] Playwright end-to-end tests
 - [ ] Invitations
@@ -78,11 +78,14 @@ Test generation, sandboxed execution and coverage are all still to do.
 ## Brief phase 6: developer automation: partly done
 
 - [x] CI failure analysis (logs redacted, evidence quotes verified)
+- [x] CI/CD pages: run history with filters, run detail with the AI analysis
 - [ ] Issue planning, documentation generation, task history
 
 ## Brief phase 7: analytics and SaaS: partly done
 
 - [x] AI usage dashboard (calls, tokens, errors, quota status) and usage records
+- [x] Analytics page: AI work and CI outcomes per day, CI success rate, average review and analysis
+      times, findings by severity, tokens per day (activity counts, not productivity claims)
 - [ ] Subscriptions, entitlements, billing, audit log, team analytics
 
 ## Brief phase 8: production hardening: not started

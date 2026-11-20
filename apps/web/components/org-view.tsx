@@ -8,11 +8,12 @@ import { AiPanel } from "@/components/ai-panel";
 import { AskPanel } from "@/components/ask-panel";
 import { CiRuns } from "@/components/ci-runs";
 import { CodeSearch } from "@/components/code-search";
+import { GithubPanel } from "@/components/github-panel";
 import { IndexCell } from "@/components/index-cell";
 import { PageHeader } from "@/components/page-header";
 import { PullRequests } from "@/components/pull-requests";
 import { UsageDashboard } from "@/components/usage-dashboard";
-import { ApiError, codeApi, orgApi, type CiState, type GithubInstallation } from "@/lib/api";
+import { ApiError, codeApi, orgApi, type CiState } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,6 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
 export function OrgView() {
   const { orgId } = useParams<{ orgId: string }>();
   const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["org", orgId] });
 
   const org = useQuery({
     queryKey: ["org", orgId, "info"],
@@ -70,21 +70,6 @@ export function OrgView() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["org", orgId, "repos"] }),
   });
 
-  const connect = useMutation({
-    mutationFn: async () => orgApi.installUrl(await accessToken(), orgId),
-    onSuccess: ({ url }) => window.location.assign(url),
-  });
-  const sync = useMutation({
-    mutationFn: async (installationId: string) =>
-      orgApi.sync(await accessToken(), orgId, installationId),
-    onSuccess: refresh,
-  });
-  const disconnect = useMutation({
-    mutationFn: async (installationId: string) =>
-      orgApi.disconnect(await accessToken(), orgId, installationId),
-    onSuccess: refresh,
-  });
-
   if (org.isError) {
     const notFound = org.error instanceof ApiError && org.error.status === 404;
     return (
@@ -101,8 +86,6 @@ export function OrgView() {
 
   const isAdmin = org.data?.role === "admin" || org.data?.role === "owner";
   const canIndex = isAdmin || org.data?.role === "member";
-  const gh = github.data;
-  const mutationError = [connect, sync, disconnect].find((m) => m.isError)?.error;
 
   return (
     <div>
@@ -131,97 +114,7 @@ export function OrgView() {
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="text-lg font-medium">GitHub</h2>
-
-        {gh && !gh.configured && (
-          <div className="mt-3 space-y-1 text-sm">
-            <p className="text-muted-foreground">GitHub isn’t set up on the server yet.</p>
-            {gh.missing.length > 0 && (
-              <p className="text-muted-foreground">
-                Missing: <code className="font-mono">{gh.missing.join(", ")}</code>. See{" "}
-                <code className="font-mono">docs/GITHUB.md</code>.
-              </p>
-            )}
-          </div>
-        )}
-
-        {gh?.configured && gh.installations.length === 0 && (
-          <div className="mt-3">
-            <p className="text-sm text-muted-foreground">
-              Connect a GitHub account or organization to see its repositories here. DevPilot only
-              asks for read access.
-            </p>
-            {isAdmin ? (
-              <button
-                onClick={() => connect.mutate()}
-                disabled={connect.isPending}
-                className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-              >
-                {connect.isPending ? "Opening GitHub…" : "Connect GitHub"}
-              </button>
-            ) : (
-              <p className="mt-3 text-sm text-muted-foreground">
-                An admin of this organization needs to connect GitHub.
-              </p>
-            )}
-          </div>
-        )}
-
-        {gh && gh.installations.length > 0 && (
-          <ul className="mt-3 divide-y divide-border border-y border-border">
-            {gh.installations.map((i: GithubInstallation) => (
-              <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <p className="font-medium">{i.account_login}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {i.suspended
-                      ? "Suspended on GitHub"
-                      : i.sync_status === "running"
-                        ? "Syncing…"
-                        : `Last synced ${ago(i.last_synced_at)}`}
-                  </p>
-                  {i.sync_error && (
-                    <p role="status" className="mt-1 text-xs text-danger">
-                      {i.sync_error}
-                    </p>
-                  )}
-                </div>
-                {isAdmin && (
-                  <div className="flex gap-2 text-sm">
-                    <button
-                      onClick={() => sync.mutate(i.id)}
-                      disabled={i.sync_status === "running" || i.suspended || sync.isPending}
-                      className="rounded-md border border-border px-3 py-1.5 hover:bg-muted disabled:opacity-50"
-                    >
-                      Sync now
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Disconnect ${i.account_login}? Its synced data is removed from DevPilot. The app stays installed on GitHub until you remove it there.`,
-                          )
-                        )
-                          disconnect.mutate(i.id);
-                      }}
-                      className="rounded-md border border-border px-3 py-1.5 text-danger hover:bg-muted"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {mutationError && (
-          <p role="alert" className="mt-3 text-sm text-danger">
-            {mutationError instanceof Error ? mutationError.message : "Something went wrong."}
-          </p>
-        )}
-      </section>
+      <GithubPanel orgId={orgId} isAdmin={isAdmin} />
 
       {org.data && <AiPanel orgId={orgId} isAdmin={isAdmin} />}
 

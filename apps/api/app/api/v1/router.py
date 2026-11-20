@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     ai,
+    analytics,
     ask,
     ci,
     dashboard,
@@ -28,6 +29,7 @@ api_router.include_router(github.router)
 api_router.include_router(indexing.router)
 api_router.include_router(reviews.router)
 api_router.include_router(ci.router)
+api_router.include_router(analytics.router)
 api_router.include_router(issues.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(repos.router)

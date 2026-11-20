@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 
-import type { Me, OrgWithRole, PullRequestRow, Repo } from "@/lib/api";
+import type { CiRunRow, Me, OrgWithRole, PullRequestRow, Repo } from "@/lib/api";
 
 export function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -60,6 +60,42 @@ export function pull(over: Partial<PullRequestRow> = {}): PullRequestRow {
     html_url: "https://github.com/acme/web/pull/7",
     updated_at: new Date().toISOString(),
     review: null,
+    ...over,
+  };
+}
+
+export function run(over: Partial<CiRunRow> = {}): CiRunRow {
+  return {
+    id: "run-1",
+    repository_id: "repo-1",
+    repository: "acme/web",
+    name: "CI",
+    event: "push",
+    branch: "main",
+    run_number: 7,
+    status: "completed",
+    conclusion: "failure",
+    html_url: "https://github.com/acme/web/actions/runs/7",
+    updated_at: new Date().toISOString(),
+    analyzable: true,
+    analysis: null,
+    ...over,
+  };
+}
+
+export function installation(over: Partial<import("@/lib/api").GithubInstallation> = {}): import("@/lib/api").GithubInstallation {
+  return {
+    id: "inst-1",
+    org_id: "org-1",
+    installation_id: 777,
+    account_login: "acme-inc",
+    account_type: "Organization",
+    repository_selection: "all",
+    suspended: false,
+    sync_status: "idle",
+    sync_error: null,
+    last_synced_at: new Date().toISOString(),
+    created_at: "2026-01-01T00:00:00Z",
     ...over,
   };
 }

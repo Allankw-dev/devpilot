@@ -3,6 +3,26 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Phase 10, milestone C: CI/CD, Analytics and Integrations pages
+
+- **CI/CD** (`/ci-cd`, `/ci-cd/[id]`): workflow runs with failed/all, repository and
+  workflow-or-branch search, "load more"; a run page with the AI analysis. Starting an analysis
+  is a deliberate click by a member or above.
+- **Analytics** (`/analytics`): CI success rate, reviews and CI analyses finished, average review
+  and analysis times, findings by severity, AI work and CI runs per day, tokens per day. "n/a" is
+  shown when there is nothing to measure. Cancelled and skipped runs are left out of the success
+  rate. The page says these are activity counts, not productivity.
+- **Integrations** (`/integrations`): GitHub connection (connect, sync, disconnect), the AI
+  provider panel and a note on GitHub Actions. Secret values are never shown; missing settings
+  are listed by name only. The GitHub section was extracted from the Workspace page into a
+  shared component.
+- API: `GET /orgs/{id}/analytics`, `GET /orgs/{id}/ci-runs/{run}`; the CI runs list gained
+  `repo_id`, `q` and `offset`. No migration.
+- Verified: API 690 passed on SQLite, 702 on PostgreSQL; web 128 passed; ruff, mypy, ESLint, `tsc`
+  and the production build clean. **Not** verified: a real browser or phone screen, end-to-end flows.
+- Open: team and settings pages, the assistant page (Ask with streaming, saved conversations),
+  retiring the duplicated sections on the Workspace page, then Playwright tests.
+
 ## Phase 10, milestone B: Repositories and Code Reviews pages
 
 - **Repositories** (`/repositories`): search by name or description, language and CI filters, an

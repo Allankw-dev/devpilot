@@ -1,4 +1,13 @@
-import { FolderGit2, GitBranch, GitPullRequest, LayoutDashboard, type LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  FolderGit2,
+  GitBranch,
+  GitPullRequest,
+  LayoutDashboard,
+  Plug,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -34,6 +43,27 @@ export const NAV_ITEMS: NavItem[] = [
     icon: GitPullRequest,
     href: () => "/code-reviews",
     match: (p) => p === "/code-reviews" || p.startsWith("/code-reviews/"),
+  },
+  {
+    id: "ci-cd",
+    label: "CI/CD",
+    icon: Workflow,
+    href: () => "/ci-cd",
+    match: (p) => p === "/ci-cd" || p.startsWith("/ci-cd/"),
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    href: () => "/analytics",
+    match: (p) => p === "/analytics",
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    icon: Plug,
+    href: () => "/integrations",
+    match: (p) => p === "/integrations",
   },
   {
     id: "workspace",

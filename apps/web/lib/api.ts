@@ -446,8 +446,10 @@ export interface CiAnalysis {
 }
 
 export const ciApi = {
-  list: (token: string, orgId: string, state: "failed" | "all") =>
-    authed<CiRunRow[]>(`/orgs/${orgId}/ci-runs?state=${state}`, token),
+  list: (token: string, orgId: string, state: "failed" | "all", opts: PageOptions = {}) =>
+    authed<CiRunRow[]>(`/orgs/${orgId}/ci-runs${query({ state, ...opts })}`, token),
+  run: (token: string, orgId: string, runId: string) =>
+    authed<CiRunRow>(`/orgs/${orgId}/ci-runs/${runId}`, token),
   get: (token: string, orgId: string, runId: string) =>
     authed<CiAnalysis | null>(`/orgs/${orgId}/ci-runs/${runId}/analysis`, token),
   start: (token: string, orgId: string, runId: string, force: boolean) =>
@@ -560,4 +562,32 @@ export const issueApi = {
     state: "open" | "closed" | "all",
     opts: PageOptions = {},
   ) => authed<IssueRow[]>(`/orgs/${orgId}/issues${query({ state, ...opts })}`, token),
+};
+
+
+// ---------- analytics ----------
+
+export interface Analytics {
+  days: number;
+  since: string;
+  reviews_finished: number;
+  ci_analyses_finished: number;
+  runs_succeeded: number;
+  runs_failed: number;
+  ci_success_rate: number | null; // null when there were no finished runs
+  avg_review_seconds: number | null;
+  avg_ci_analysis_seconds: number | null;
+  findings_by_severity: { severity: "critical" | "high" | "medium" | "low" | "info"; count: number }[];
+  by_day: {
+    day: string;
+    reviews_finished: number;
+    ci_analyses_finished: number;
+    runs_succeeded: number;
+    runs_failed: number;
+  }[];
+}
+
+export const analyticsApi = {
+  get: (token: string, orgId: string, days: number) =>
+    authed<Analytics>(`/orgs/${orgId}/analytics?days=${days}`, token),
 };
