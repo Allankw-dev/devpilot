@@ -3,6 +3,23 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Phase 10, milestone D: Team and Settings pages
+
+- **Team** (`/team`): members with roles, add a member by email, change roles, remove, leave the
+  workspace; teams with their members. The role choices shown follow the server's rules (owners
+  grant anything, admins only member or viewer and can't touch other admins; the server still
+  enforces them and its messages are shown, for example the last-owner rule).
+- **Settings** (`/settings`): read-only profile (name and email come from the sign-in provider),
+  theme choice, workspace rename (admins), and an owner-only delete that needs the workspace name
+  typed in.
+- No backend changes: the endpoints already existed.
+- Not built, so not shown: notifications, security, API keys, subscription, invitations.
+- Verified: web 163 passed; ESLint, `tsc` and the production build clean. API unchanged
+  (690 passed on SQLite, 702 on PostgreSQL at the last full run). **Not** verified: a real
+  browser or phone screen.
+- Open: the assistant page (Ask with streaming, saved conversations, code search), retiring
+  duplicated sections on the Workspace page, Playwright tests, invitations.
+
 ## Phase 10, milestone C: CI/CD, Analytics and Integrations pages
 
 - **CI/CD** (`/ci-cd`, `/ci-cd/[id]`): workflow runs with failed/all, repository and

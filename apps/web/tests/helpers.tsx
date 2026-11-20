@@ -99,3 +99,14 @@ export function installation(over: Partial<import("@/lib/api").GithubInstallatio
     ...over,
   };
 }
+
+export function member(over: Partial<import("@/lib/api").Member> = {}): import("@/lib/api").Member {
+  return {
+    user_id: "u2",
+    email: "grace@example.com",
+    display_name: "Grace Hopper",
+    role: "member",
+    joined_at: new Date().toISOString(),
+    ...over,
+  };
+}

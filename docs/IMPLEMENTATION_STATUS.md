@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone C**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone D**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -13,7 +13,7 @@ development log maps one to the other.
 |---|---|
 | API on SQLite | 690 passed, 14 skipped (the skipped ones need PostgreSQL) |
 | API on PostgreSQL 16 + pgvector | 702 passed, 2 skipped |
-| Web (Vitest) | 128 passed |
+| Web (Vitest) | 163 passed |
 | Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -31,12 +31,16 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)
-- [x] Routed pages: Dashboard, Repositories, Code Reviews, CI/CD, Analytics, Integrations
-- [ ] Routed pages still to build: assistant (Ask and code search), team, settings. Until then those
-      live on the **Workspace** page, which also still repeats some of the new pages' content
+- [x] Routed pages: Dashboard, Repositories, Code Reviews, CI/CD, Analytics, Integrations, Team,
+      Settings
+- [ ] Routed page still to build: assistant (Ask and code search). Until then it lives on the
+      **Workspace** page, which also still repeats some of the new pages' content
+- [ ] Settings sections from the brief that don't exist yet: notifications, security, API keys,
+      subscription (no placeholders are shown for them)
 - [ ] shadcn/ui components beyond Button and Card, Monaco, React Hook Form, Zod, React Flow
 - [ ] Playwright end-to-end tests
-- [ ] Invitations
+- [x] Team page: members, roles (with the same rules the server enforces), teams, leave workspace
+- [ ] Invitations: you can only add people who have already signed in once
 - [ ] PostgreSQL row-level security (tenant isolation is enforced in code and tested)
 - [ ] Docker images for the API and web app
 

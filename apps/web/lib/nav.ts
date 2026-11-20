@@ -5,6 +5,8 @@ import {
   GitPullRequest,
   LayoutDashboard,
   Plug,
+  Settings,
+  Users,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
@@ -64,6 +66,20 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Plug,
     href: () => "/integrations",
     match: (p) => p === "/integrations",
+  },
+  {
+    id: "team",
+    label: "Team",
+    icon: Users,
+    href: () => "/team",
+    match: (p) => p === "/team",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    href: () => "/settings",
+    match: (p) => p === "/settings",
   },
   {
     id: "workspace",

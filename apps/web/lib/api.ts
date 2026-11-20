@@ -591,3 +591,61 @@ export const analyticsApi = {
   get: (token: string, orgId: string, days: number) =>
     authed<Analytics>(`/orgs/${orgId}/analytics?days=${days}`, token),
 };
+
+
+// ---------- members, teams and workspace settings ----------
+
+export interface Member {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  role: Role;
+  joined_at: string;
+}
+
+export interface Team {
+  id: string;
+  org_id: string;
+  name: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface TeamMember {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+}
+
+export const membersApi = {
+  list: (token: string, orgId: string) => authed<Member[]>(`/orgs/${orgId}/members`, token),
+  add: (token: string, orgId: string, email: string, role: Role) =>
+    authed<Member>(`/orgs/${orgId}/members`, token, { method: "POST", body: JSON.stringify({ email, role }) }),
+  setRole: (token: string, orgId: string, userId: string, role: Role) =>
+    authed<Member>(`/orgs/${orgId}/members/${userId}`, token, { method: "PATCH", body: JSON.stringify({ role }) }),
+  remove: (token: string, orgId: string, userId: string) =>
+    authed<void>(`/orgs/${orgId}/members/${userId}`, token, { method: "DELETE" }),
+};
+
+export const teamsApi = {
+  list: (token: string, orgId: string) => authed<Team[]>(`/orgs/${orgId}/teams`, token),
+  create: (token: string, orgId: string, name: string) =>
+    authed<Team>(`/orgs/${orgId}/teams`, token, { method: "POST", body: JSON.stringify({ name }) }),
+  remove: (token: string, orgId: string, teamId: string) =>
+    authed<void>(`/orgs/${orgId}/teams/${teamId}`, token, { method: "DELETE" }),
+  members: (token: string, orgId: string, teamId: string) =>
+    authed<TeamMember[]>(`/orgs/${orgId}/teams/${teamId}/members`, token),
+  addMember: (token: string, orgId: string, teamId: string, userId: string) =>
+    authed<TeamMember>(`/orgs/${orgId}/teams/${teamId}/members`, token, {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId }),
+    }),
+  removeMember: (token: string, orgId: string, teamId: string, userId: string) =>
+    authed<void>(`/orgs/${orgId}/teams/${teamId}/members/${userId}`, token, { method: "DELETE" }),
+};
+
+export const workspaceApi = {
+  rename: (token: string, orgId: string, name: string) =>
+    authed<OrgWithRole>(`/orgs/${orgId}`, token, { method: "PATCH", body: JSON.stringify({ name }) }),
+  remove: (token: string, orgId: string) => authed<void>(`/orgs/${orgId}`, token, { method: "DELETE" }),
+};
