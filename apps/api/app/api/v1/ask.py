@@ -1,24 +1,17 @@
-import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
+from app.api.ask_flow import run_ask
 from app.api.deps import DbSession, MemberCtx, get_llm, get_retriever
-from app.api.llm_http import llm_http_error
-from app.api.ratelimit import check_rate_limit
-from app.api.v1.indexing import _repo_in_org
 from app.core.config import Settings, get_settings
-from app.db.models import EMBEDDING_COLUMN_DIMENSIONS
-from app.schemas import AskCitation, AskOut, AskRequest
-from app.services.indexing.retrieval import Retriever, file_list, search_hits
-from app.services.llm import CallContext, LLMError, LLMService
-from app.services.qa.answer import answer_question
+from app.schemas import AskOut, AskRequest
+from app.services.indexing.retrieval import Retriever
+from app.services.llm import LLMService
 
-logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ask"])
 
 Config = Annotated[Settings, Depends(get_settings)]
-FEATURE = "ask"
 
 
 @router.post("/orgs/{org_id}/ask", response_model=AskOut)
@@ -31,84 +24,13 @@ def ask(
     retrieve: Annotated[Retriever, Depends(get_retriever)],
 ) -> AskOut:
     """Answer a question about this organization's indexed code, citing files and lines."""
-    if retrieve is search_hits and db.get_bind().dialect.name != "postgresql":
-        raise HTTPException(
-            status.HTTP_501_NOT_IMPLEMENTED, "Asking about code needs PostgreSQL with pgvector"
-        )
-    if llm.embedding_model is None:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, "Embeddings are not configured on the server"
-        )
-    if body.repository_id is not None:
-        _repo_in_org(db, ctx.org.id, body.repository_id)
-    check_rate_limit(
-        db, ctx.user.id, FEATURE, settings.ask_rate_limit_per_minute, what="questions"
-    )
-
-    try:
-        embedded = llm.embed(
-            [body.question],
-            "query",
-            CallContext(feature="ask_retrieval", org_id=ctx.org.id, user_id=ctx.user.id),
-        )
-    except LLMError as exc:
-        raise llm_http_error(exc) from exc
-    vector = embedded.vectors[0]
-    if len(vector) != EMBEDDING_COLUMN_DIMENSIONS:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, "The embedding model returned an unexpected vector size"
-        )
-
-    hits = retrieve(
-        db,
-        ctx.org.id,
-        vector,
-        body.repository_id,
-        settings.ask_top_k,
-        settings.ask_max_chunks_per_file,
-    )
-    if not hits:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "Nothing is indexed to answer from. Index a repository first.",
-        )
-    files = (
-        file_list(db, ctx.org.id, body.repository_id) if body.repository_id is not None else []
-    )
-
-    try:
-        answer = answer_question(
-            llm,
-            body.question,
-            hits,
-            files,
-            CallContext(feature=FEATURE, org_id=ctx.org.id, user_id=ctx.user.id),
-            max_context_chars=settings.ask_max_context_chars,
-            max_output_tokens=settings.ask_max_output_tokens,
-        )
-    except LLMError as exc:
-        logger.warning("Ask failed: %s", exc.code)
-        raise llm_http_error(exc) from exc
-
-    return AskOut(
-        answer=answer.text,
-        confidence=answer.confidence,
-        missing_context=answer.missing_context,
-        citations=[
-            AskCitation(
-                n=s.n,
-                repository_id=s.hit.repo_id,
-                repository=s.hit.repository,
-                path=s.hit.path,
-                start_line=s.hit.start_line,
-                end_line=s.hit.end_line,
-                symbol=s.hit.symbol,
-                score=s.hit.score,
-            )
-            for s in answer.citations
-        ],
-        sources_considered=answer.sources_considered,
-        model=answer.model,
-        input_tokens=answer.usage.input_tokens,
-        output_tokens=answer.usage.output_tokens,
+    return run_ask(
+        db=db,
+        org_id=ctx.org.id,
+        user_id=ctx.user.id,
+        settings=settings,
+        llm=llm,
+        retrieve=retrieve,
+        question=body.question,
+        repository_id=body.repository_id,
     )

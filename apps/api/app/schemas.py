@@ -580,3 +580,49 @@ class AnalyticsOut(BaseModel):
     avg_ci_analysis_seconds: int | None
     findings_by_severity: list[AnalyticsSeverityOut]  # every severity, even when zero
     by_day: list[AnalyticsDayOut]
+
+
+# ---------- assistant conversations ----------
+
+
+class ConversationCreate(BaseModel):
+    repository_id: uuid.UUID | None = None  # null: ask across all indexed repositories
+
+
+class ConversationOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    repository_id: uuid.UUID | None
+    repository: str | None
+    message_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationMessageOut(BaseModel):
+    id: uuid.UUID
+    role: str  # user | assistant
+    content: str  # assistant answers are Markdown with [n] citations
+    citations: list[AskCitation]
+    confidence: str | None
+    missing_context: str | None
+    sources_considered: int | None
+    model: str | None
+    input_tokens: int
+    output_tokens: int
+    created_at: datetime
+
+
+class ConversationDetailOut(ConversationOut):
+    messages: list[ConversationMessageOut]
+
+
+class MessageCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    question: str = Field(min_length=3, max_length=1000)
+
+
+class MessagePairOut(BaseModel):
+    user: ConversationMessageOut
+    assistant: ConversationMessageOut

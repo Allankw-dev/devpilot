@@ -108,6 +108,16 @@ def test_anthropic_needs_its_own_key_only_when_selected() -> None:
     assert s.llm_missing_settings() == ["ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"]
 
 
+def test_groq_needs_its_own_key_only_when_selected() -> None:
+    s = settings(llm_provider="groq")
+    assert s.llm_missing_settings() == ["GROQ_API_KEY", "GROQ_MODEL"]
+
+
+def test_openrouter_needs_its_own_key_only_when_selected() -> None:
+    s = settings(llm_provider="openrouter")
+    assert s.llm_missing_settings() == ["OPENROUTER_API_KEY", "OPENROUTER_MODEL"]
+
+
 def test_whitespace_only_values_count_as_missing() -> None:
     s = settings(gemini_api_key=SecretStr("  "), gemini_model="  ")
     assert s.llm_missing_settings() == ["GEMINI_API_KEY", "GEMINI_MODEL"]

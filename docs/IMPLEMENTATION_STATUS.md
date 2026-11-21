@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone D**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone E (the Assistant)**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,9 +11,9 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 690 passed, 14 skipped (the skipped ones need PostgreSQL) |
-| API on PostgreSQL 16 + pgvector | 702 passed, 2 skipped |
-| Web (Vitest) | 163 passed |
+| API on SQLite | 711 passed, 14 skipped (the skipped ones need PostgreSQL) |
+| API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped |
+| Web (Vitest) | 203 passed |
 | Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -24,17 +24,19 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 ## Brief phase 1: foundation and UI: partly done
 
 - [x] Monorepo (`apps/api`, `apps/web`; the brief suggests `backend/` and `frontend/`, we keep ours)
-- [x] FastAPI, PostgreSQL, SQLAlchemy 2, Alembic (7 migrations, `alembic check` in CI)
+- [x] FastAPI, PostgreSQL, SQLAlchemy 2, Alembic (8 migrations, `alembic check` in CI)
 - [x] Supabase authentication, organizations, roles (owner, admin, member, viewer), teams
 - [x] Docker Compose for the database and Redis
 - [x] Design system: dark-first palette from the brief, light theme, Inter and JetBrains Mono
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)
-- [x] Routed pages: Dashboard, Repositories, Code Reviews, CI/CD, Analytics, Integrations, Team,
-      Settings
-- [ ] Routed page still to build: assistant (Ask and code search). Until then it lives on the
-      **Workspace** page, which also still repeats some of the new pages' content
+- [x] Routed pages: Dashboard, Repositories, Assistant, Code Reviews, CI/CD, Analytics,
+      Integrations, Team, Settings
+- [ ] Brief pages with no feature behind them yet, so no page: test generator, issues and
+      planning, documentation, code health
+- [ ] The **Workspace** page still exists and repeats some of the new pages' content (code search
+      still only lives there); retire it once nothing unique is left
 - [ ] Settings sections from the brief that don't exist yet: notifications, security, API keys,
       subscription (no placeholders are shown for them)
 - [ ] shadcn/ui components beyond Button and Card, Monaco, React Hook Form, Zod, React Flow
@@ -61,8 +63,11 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] Daily-quota detection (fail fast with a clear message)
 - [x] Indexing with secret exclusion, chunking, embeddings, pgvector search
 - [x] Ask with answers that cite real files, citations checked against retrieved code
-- [ ] Streaming responses, stop and regenerate
-- [ ] Saved conversations and history
+- [x] Assistant page: saved private conversations, a repository choice per conversation, example
+      questions, sources with line links, copy answer, generate the latest answer again
+- [ ] Streaming and a Stop button. Answers are checked against the code only after the full text
+      exists, so they are returned whole, not token by token
+- [ ] Follow-up questions that use earlier answers: each question is answered from the code on its own
 - [ ] Tree-sitter parsing (chunking is line-based)
 
 ## Brief phase 4: AI code review: mostly done

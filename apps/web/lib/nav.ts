@@ -4,6 +4,7 @@ import {
   GitBranch,
   GitPullRequest,
   LayoutDashboard,
+  MessageSquare,
   Plug,
   Settings,
   Users,
@@ -38,6 +39,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: GitBranch,
     href: () => "/repositories",
     match: (p) => p === "/repositories" || p.startsWith("/repositories/"),
+  },
+  {
+    id: "assistant",
+    label: "Assistant",
+    icon: MessageSquare,
+    href: () => "/assistant",
+    match: (p) => p === "/assistant",
   },
   {
     id: "code-reviews",

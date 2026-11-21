@@ -22,7 +22,7 @@ describe("navigation", () => {
   });
 
   it("marks exactly one item active for each page", () => {
-    for (const path of ["/dashboard", "/orgs/org-1", "/repositories", "/repositories/r1", "/code-reviews", "/code-reviews/p1", "/ci-cd", "/ci-cd/r1", "/analytics", "/integrations", "/team", "/settings"]) {
+    for (const path of ["/dashboard", "/orgs/org-1", "/repositories", "/repositories/r1", "/assistant", "/code-reviews", "/code-reviews/p1", "/ci-cd", "/ci-cd/r1", "/analytics", "/integrations", "/team", "/settings"]) {
       expect(NAV_ITEMS.filter((i) => i.match(path))).toHaveLength(1);
     }
     expect(NAV_ITEMS.filter((i) => i.match("/somewhere-else"))).toHaveLength(0);
@@ -36,6 +36,7 @@ describe("navigation", () => {
     expect(titleFor("/ci-cd/r1")).toBe("CI/CD");
     expect(titleFor("/analytics")).toBe("Analytics");
     expect(titleFor("/integrations")).toBe("Integrations");
+    expect(titleFor("/assistant")).toBe("Assistant");
     expect(titleFor("/team")).toBe("Team");
     expect(titleFor("/settings")).toBe("Settings");
     expect(titleFor("/nowhere")).toBe("");

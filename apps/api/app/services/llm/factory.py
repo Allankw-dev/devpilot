@@ -21,18 +21,69 @@ def build_generation_provider(settings: Settings) -> LLMProvider:
         from app.services.llm.providers.anthropic_provider import AnthropicProvider
 
         assert settings.anthropic_api_key and settings.anthropic_model
-        return AnthropicProvider(
+        primary: LLMProvider = AnthropicProvider(
             api_key=settings.anthropic_api_key.get_secret_value(), model=settings.anthropic_model
         )
-    from app.services.llm.providers.gemini_provider import GeminiProvider
+    elif settings.llm_provider == "groq":
+        from app.services.llm.providers.openai_compatible_provider import OpenAICompatibleProvider
 
-    assert settings.gemini_api_key and settings.gemini_model
-    return GeminiProvider(
-        api_key=settings.gemini_api_key.get_secret_value(),
-        model=settings.gemini_model,
-        embedding_model=settings.gemini_embedding_model,
-        embedding_dimensions=settings.embedding_dimensions,
-    )
+        assert settings.groq_api_key and settings.groq_model
+        primary = OpenAICompatibleProvider(
+            name="groq",
+            api_key=settings.groq_api_key.get_secret_value(),
+            model=settings.groq_model,
+            base_url="https://api.groq.com/openai/v1",
+        )
+    elif settings.llm_provider == "openrouter":
+        from app.services.llm.providers.openai_compatible_provider import OpenAICompatibleProvider
+
+        assert settings.openrouter_api_key and settings.openrouter_model
+        primary = OpenAICompatibleProvider(
+            name="openrouter",
+            api_key=settings.openrouter_api_key.get_secret_value(),
+            model=settings.openrouter_model,
+            base_url="https://openrouter.ai/api/v1",
+        )
+    else:
+        from app.services.llm.providers.gemini_provider import GeminiProvider
+
+        assert settings.gemini_api_key and settings.gemini_model
+        primary = GeminiProvider(
+            api_key=settings.gemini_api_key.get_secret_value(),
+            model=settings.gemini_model,
+            embedding_model=settings.gemini_embedding_model,
+            embedding_dimensions=settings.embedding_dimensions,
+        )
+
+    fallbacks: list[LLMProvider] = []
+    if settings.groq_api_key and settings.groq_model:
+        from app.services.llm.providers.openai_compatible_provider import OpenAICompatibleProvider
+
+        fallbacks.append(
+            OpenAICompatibleProvider(
+                name="groq",
+                api_key=settings.groq_api_key.get_secret_value(),
+                model=settings.groq_model,
+                base_url="https://api.groq.com/openai/v1",
+            )
+        )
+    if settings.openrouter_api_key and settings.openrouter_model:
+        from app.services.llm.providers.openai_compatible_provider import OpenAICompatibleProvider
+
+        fallbacks.append(
+            OpenAICompatibleProvider(
+                name="openrouter",
+                api_key=settings.openrouter_api_key.get_secret_value(),
+                model=settings.openrouter_model,
+                base_url="https://openrouter.ai/api/v1",
+            )
+        )
+
+    if not fallbacks:
+        return primary
+    from app.services.llm.fallback import FallbackProvider
+
+    return FallbackProvider(primary, fallbacks)
 
 
 def build_embedding_provider(settings: Settings) -> LLMProvider | None:

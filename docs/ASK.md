@@ -77,3 +77,22 @@ relevant code wasn't retrieved**: try a more specific question, choose the repos
 | "cut off before the JSON was complete" | raise `ASK_MAX_OUTPUT_TOKENS` |
 | "The AI provider is rate limiting us" / 503 "high demand" | Google is busy: wait and retry |
 | A confident-sounding but wrong answer | check the cited lines; re-index if the code changed |
+
+
+## Conversations (Assistant page)
+
+The **Assistant** page keeps your questions and answers as saved conversations.
+
+- A conversation can be about one indexed repository or all of them. The choice is fixed when it
+  starts.
+- Conversations are **private to you**: no other member, admins included, can see them.
+- A question and its answer are saved together and only when the answer succeeded. A failed
+  attempt can be retried and leaves nothing behind.
+- Each question is answered from the code on its own. It does not see your earlier questions or
+  answers, so ask follow-ups as complete questions ("How does `login_user` check the password?").
+- Answers arrive whole (not streamed) because their citations are checked against the code
+  first. There is no Stop button for the same reason.
+- **Generate again** re-asks the latest question and replaces the latest answer. It uses AI
+  tokens, so it only runs when you click it.
+- One conversation holds at most 100 messages; start a new one after that.
+- Delete a conversation from its page. This removes its messages for good.

@@ -649,3 +649,60 @@ export const workspaceApi = {
     authed<OrgWithRole>(`/orgs/${orgId}`, token, { method: "PATCH", body: JSON.stringify({ name }) }),
   remove: (token: string, orgId: string) => authed<void>(`/orgs/${orgId}`, token, { method: "DELETE" }),
 };
+
+
+// ---------- assistant conversations ----------
+
+export interface Conversation {
+  id: string;
+  title: string;
+  repository_id: string | null;
+  repository: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssistantMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string; // assistant answers are Markdown with [n] citations
+  citations: AskCitation[];
+  confidence: "high" | "medium" | "low" | null;
+  missing_context: string | null;
+  sources_considered: number | null;
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  created_at: string;
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: AssistantMessage[];
+}
+
+export const conversationApi = {
+  list: (token: string, orgId: string, opts: { limit?: number; offset?: number } = {}) =>
+    authed<Conversation[]>(`/orgs/${orgId}/conversations${query(opts)}`, token),
+  create: (token: string, orgId: string, repositoryId?: string) =>
+    authed<Conversation>(`/orgs/${orgId}/conversations`, token, {
+      method: "POST",
+      body: JSON.stringify(repositoryId ? { repository_id: repositoryId } : {}),
+    }),
+  get: (token: string, orgId: string, conversationId: string) =>
+    authed<ConversationDetail>(`/orgs/${orgId}/conversations/${conversationId}`, token),
+  remove: (token: string, orgId: string, conversationId: string) =>
+    authed<void>(`/orgs/${orgId}/conversations/${conversationId}`, token, { method: "DELETE" }),
+  ask: (token: string, orgId: string, conversationId: string, question: string) =>
+    authed<{ user: AssistantMessage; assistant: AssistantMessage }>(
+      `/orgs/${orgId}/conversations/${conversationId}/messages`,
+      token,
+      { method: "POST", body: JSON.stringify({ question }) },
+    ),
+  regenerate: (token: string, orgId: string, conversationId: string, messageId: string) =>
+    authed<AssistantMessage>(
+      `/orgs/${orgId}/conversations/${conversationId}/messages/${messageId}/regenerate`,
+      token,
+      { method: "POST" },
+    ),
+};

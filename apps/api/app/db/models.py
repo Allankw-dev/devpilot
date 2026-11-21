@@ -489,3 +489,53 @@ class CiAnalysis(Base):
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(String(500))
+
+
+class Conversation(Base):
+    """A saved thread of questions about the organization's code. Private to the person who
+    started it: other members, admins included, never see it."""
+
+    __tablename__ = "conversations"
+    __table_args__ = (
+        Index("ix_conversations_org_id_user_id_updated_at", "org_id", "user_id", "updated_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
+    repo_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("repositories.id", ondelete="SET NULL")
+    )  # the repository the questions are about; null = all indexed repositories
+    title: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ConversationMessage(Base):
+    __tablename__ = "conversation_messages"
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant')", name="role_valid"),
+        Index(
+            "ix_conversation_messages_conversation_id_created_at", "conversation_id", "created_at"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="CASCADE")
+    )
+    role: Mapped[str] = mapped_column(String(10))
+    content: Mapped[str] = mapped_column(Text)
+    # assistant messages only: the answer's checked citations and how sure the model was
+    citations: Mapped[list[dict[str, object]] | None] = mapped_column(JSON)
+    confidence: Mapped[str | None] = mapped_column(String(10))
+    missing_context: Mapped[str | None] = mapped_column(Text)
+    sources_considered: Mapped[int | None] = mapped_column(Integer)
+    model: Mapped[str | None] = mapped_column(String(100))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

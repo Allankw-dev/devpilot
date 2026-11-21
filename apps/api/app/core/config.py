@@ -62,7 +62,7 @@ class Settings(BaseSettings):
 
     # AI (setup: docs/AI.md). Model names are deliberately required settings with no default:
     # providers retire and rename models, so a name baked into code goes stale silently.
-    llm_provider: Literal["gemini", "anthropic"] = "gemini"
+    llm_provider: Literal["gemini", "anthropic", "groq", "openrouter"] = "gemini"
     embedding_provider: Literal["gemini"] = "gemini"
     llm_timeout_seconds: float = 60.0  # per provider call
     llm_max_attempts: int = 3  # calls per operation, retries included
@@ -97,6 +97,10 @@ class Settings(BaseSettings):
 
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str | None = None
+    groq_api_key: SecretStr | None = None
+    groq_model: str | None = None
+    openrouter_api_key: SecretStr | None = None
+    openrouter_model: str | None = None
 
     def github_private_key(self) -> str | None:
         inline = (
@@ -147,6 +151,16 @@ class Settings(BaseSettings):
             pairs = (
                 ("ANTHROPIC_API_KEY", self.anthropic_api_key),
                 ("ANTHROPIC_MODEL", self.anthropic_model),
+            )
+        elif self.llm_provider == "groq":
+            pairs = (
+                ("GROQ_API_KEY", self.groq_api_key),
+                ("GROQ_MODEL", self.groq_model),
+            )
+        elif self.llm_provider == "openrouter":
+            pairs = (
+                ("OPENROUTER_API_KEY", self.openrouter_api_key),
+                ("OPENROUTER_MODEL", self.openrouter_model),
             )
         else:
             pairs = (("GEMINI_API_KEY", self.gemini_api_key), ("GEMINI_MODEL", self.gemini_model))

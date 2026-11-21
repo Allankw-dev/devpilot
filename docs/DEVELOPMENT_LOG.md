@@ -3,6 +3,30 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Phase 10, milestone E: the Assistant
+
+- **Assistant** (`/assistant`): a list of your conversations, a new-conversation screen (choose
+  one indexed repository or all, or click an example question) and a conversation view with the
+  answer, confidence, sources linked to the exact lines on GitHub, copy, and "Generate again" for
+  the latest answer. Viewers can read but not ask.
+- **Private by design:** a conversation is visible only to the person who started it. Other
+  members, admins included, get a 404. Deleting a conversation deletes its messages.
+- **Saved only on success:** a question and its answer are stored together, so a failed attempt
+  leaves no half-finished thread and costs no stored data. Retrying reuses the same conversation.
+- **Limits, stated in the page:** each question is answered from the code on its own (it doesn't
+  see earlier answers); answers arrive whole rather than streamed, because citations are checked
+  against the code after the full text exists; one conversation holds at most 100 messages.
+- API: `/orgs/{id}/conversations` (list, create, read, delete), `.../messages` (ask) and
+  `.../messages/{id}/regenerate`. The Ask logic moved into one shared function, `run_ask`, used by
+  both `/ask` and conversations (the 25 existing Ask tests pass unchanged). Migration `0008`
+  (`conversations`, `conversation_messages`), verified on PostgreSQL: upgrade, `alembic check`,
+  downgrade, upgrade.
+- Verified: API 711 passed on SQLite, 723 on PostgreSQL; web 203 passed; ruff, mypy, ESLint, `tsc`
+  and the production build clean. **Not** verified: a real browser, phone screen, or a real
+  Gemini answer through the new page.
+- Open: streaming and Stop, follow-ups that use earlier answers, moving code search to its own
+  page and retiring the Workspace page, Playwright tests.
+
 ## Phase 10, milestone D: Team and Settings pages
 
 - **Team** (`/team`): members with roles, add a member by email, change roles, remove, leave the

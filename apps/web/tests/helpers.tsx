@@ -110,3 +110,39 @@ export function member(over: Partial<import("@/lib/api").Member> = {}): import("
     ...over,
   };
 }
+
+export function answer(over: Partial<import("@/lib/api").AssistantMessage> = {}): import("@/lib/api").AssistantMessage {
+  return {
+    id: "m2",
+    role: "assistant",
+    content: "Login is handled in `login_user` [1].",
+    citations: [
+      { n: 1, repository_id: "repo-1", repository: "acme/web", path: "auth/login.py", start_line: 10, end_line: 42, symbol: "login_user", score: 0.9 },
+    ],
+    confidence: "high",
+    missing_context: null,
+    sources_considered: 6,
+    model: "fake-model",
+    input_tokens: 10,
+    output_tokens: 5,
+    created_at: new Date().toISOString(),
+    ...over,
+  };
+}
+
+export function question(text = "Where is login handled?", id = "m1"): import("@/lib/api").AssistantMessage {
+  return { ...answer({ id, role: "user", content: text, citations: [], confidence: null, sources_considered: null, model: null }) };
+}
+
+export function conversation(over: Partial<import("@/lib/api").Conversation> = {}): import("@/lib/api").Conversation {
+  return {
+    id: "c1",
+    title: "Where is login handled?",
+    repository_id: "repo-1",
+    repository: "acme/web",
+    message_count: 2,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...over,
+  };
+}

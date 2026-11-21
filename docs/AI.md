@@ -30,6 +30,25 @@ Set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. Anthrop
 embeddings API, so embeddings stay on Gemini (`GEMINI_API_KEY` + `GEMINI_EMBEDDING_MODEL`).
 Using Claude Code to develop this project needs no Anthropic key here.
 
+## Groq and OpenRouter fallbacks
+
+Configure either provider (or both) to continue generation when Gemini or Anthropic hits a
+temporary rate limit, is unavailable, or spends its daily quota:
+
+```
+GROQ_API_KEY=...
+GROQ_MODEL=...
+OPENROUTER_API_KEY=...
+OPENROUTER_MODEL=...
+```
+
+Groq is tried first and OpenRouter second. The primary provider remains
+`LLM_PROVIDER=gemini` or `LLM_PROVIDER=anthropic`. Authentication and malformed-request errors
+are not retried against fallback providers.
+
+You may also select `LLM_PROVIDER=groq` or `LLM_PROVIDER=openrouter` as the primary provider.
+Embeddings remain on Gemini; those fallback providers only handle text generation.
+
 ## What `LLMService` gives every feature
 
 | Need | Call |
