@@ -61,7 +61,7 @@ Anyone who knows a smee URL can read what passes through it, so use it for devel
 ## 4. Connect
 1. Restart the API, sign in, and open your organization.
 2. Click **Connect GitHub**, choose the account, and pick the repositories to share.
-3. You land back on the organization page. The first sync starts by itself and the numbers
+3. You land back on the Integrations page. The first sync starts by itself and the numbers
    fill in within a minute.
 
 ## What it does and doesn't do
@@ -75,7 +75,7 @@ Anyone who knows a smee URL can read what passes through it, so use it for devel
   synced repositories, including private ones.
 
 ## Troubleshooting
-- **"Missing: GITHUB_..." on the org page:** that variable is empty or the API wasn't restarted.
+- **"Missing: GITHUB_..." on the Integrations page:** that variable is empty or the API wasn't restarted.
 - **GitHub says the callback URL doesn't match:** it must be exactly
   `http://localhost:3001/github/callback`.
 - **"GitHub did not accept the authorization":** the one-time code was used or expired.

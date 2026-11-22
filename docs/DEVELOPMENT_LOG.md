@@ -3,6 +3,26 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Phase 10, milestone F: navigation finished, Workspace page retired
+
+- **Code Search** (`/search`) is its own page. The AI usage detail (calls, quota status, features,
+  models) moved to the bottom of **Analytics**, and the server status list moved to
+  **Integrations**. After the GitHub connection flow you now land on Integrations with that
+  workspace selected.
+- The old Workspace page and its four sections (Ask, pull requests, CI runs, the org view) are
+  deleted. `/orgs/{id}` redirects to the dashboard so old bookmarks still work. Every "Connect
+  GitHub", "View all" and "Open workspace" link now points at the page that really has that content;
+  the dashboard's issues card no longer has a "View all", because there is no all-issues page.
+- Navigation no longer has a disabled item state: with the Workspace page gone, every page is
+  always reachable.
+- Docs that said "open the organization page" now name the right page.
+- Verified: web 217 passed; ESLint, `tsc` and the production build clean. API unchanged
+  (711 passed on SQLite, 723 on PostgreSQL at the last full run). **Not** verified: a real browser
+  or phone screen.
+- Open: streaming and Stop in the Assistant, follow-ups that use earlier answers, Playwright tests
+  (browsers can't be downloaded in the build sandbox, so they need running on your machine),
+  Next 16 upgrade for the audit findings, then the features still missing from the brief.
+
 ## Phase 10, milestone E: the Assistant
 
 - **Assistant** (`/assistant`): a list of your conversations, a new-conversation screen (choose

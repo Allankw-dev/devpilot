@@ -227,7 +227,6 @@ export function DashboardHome() {
   }
 
   const data = dash.data;
-  const orgHref = `/orgs/${org.id}`;
   return (
     <>
       <PageHeader
@@ -251,8 +250,8 @@ export function DashboardHome() {
                 </button>
               ))}
             </div>
-            <Link href={orgHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Open workspace
+            <Link href="/repositories" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Repositories
             </Link>
           </>
         }
@@ -284,7 +283,7 @@ export function DashboardHome() {
             the AI can review pull requests, explain failed builds and answer questions about your
             code.
           </p>
-          <Link href={orgHref} className={cn(buttonVariants({ variant: "primary" }), "mt-5")}>
+          <Link href="/integrations" className={cn(buttonVariants({ variant: "primary" }), "mt-5")}>
             Connect GitHub
           </Link>
         </Card>
@@ -319,7 +318,7 @@ export function DashboardHome() {
               title="Open pull requests"
               description="Most recently updated"
               empty="No open pull requests."
-              viewAllHref={orgHref}
+              viewAllHref={"/code-reviews"}
               isEmpty={data.recent_pull_requests.length === 0}
             >
               {data.recent_pull_requests.map((pr) => (
@@ -336,8 +335,8 @@ export function DashboardHome() {
             <ListCard
               title="Recent AI reviews"
               description="Latest pull request reviews"
-              empty="No AI reviews yet. Open the workspace and review a pull request."
-              viewAllHref={orgHref}
+              empty="No AI reviews yet. Open Code Reviews and review a pull request."
+              viewAllHref={"/code-reviews"}
               isEmpty={data.recent_reviews.length === 0}
             >
               {data.recent_reviews.map((r) => (
@@ -367,7 +366,7 @@ export function DashboardHome() {
               title="Failed CI runs"
               description="Latest failed or timed-out workflow runs"
               empty="No failed runs. Nice."
-              viewAllHref={orgHref}
+              viewAllHref={"/ci-cd"}
               isEmpty={data.recent_failed_runs.length === 0}
             >
               {data.recent_failed_runs.map((run) => (
@@ -386,7 +385,7 @@ export function DashboardHome() {
               title="Open issues"
               description="Most recently updated"
               empty="No open issues."
-              viewAllHref={orgHref}
+              viewAllHref={null}
               isEmpty={data.open_issues.length === 0}
             >
               {data.open_issues.map((issue) => (

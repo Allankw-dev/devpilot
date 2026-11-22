@@ -9,7 +9,7 @@ try next, and the exact log lines it is based on.
 ## Try it
 
 1. Sync GitHub (**Sync now**) so your workflow runs appear.
-2. On the organization page, open **CI runs** (failed runs are shown first) and click **Analyze**.
+2. Open **CI/CD** (failed runs are shown first) and click **Analyze**.
 3. It goes Queued, then Reading logs, then shows the type of failure, the likely cause, a suggested
    fix, the failed steps, and quotes from the logs.
 

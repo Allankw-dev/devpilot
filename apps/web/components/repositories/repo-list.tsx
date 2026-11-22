@@ -58,7 +58,7 @@ export function RepoList() {
         title="Repositories"
         description="Repositories GitHub has shared with this workspace."
         actions={
-          <Link href={`/orgs/${org.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link href="/integrations" className={buttonVariants({ variant: "outline", size: "sm" })}>
             GitHub settings
           </Link>
         }
@@ -84,7 +84,7 @@ export function RepoList() {
           <p className="mt-2 text-sm text-muted-foreground">
             Connect GitHub and choose which repositories to share, then sync.
           </p>
-          <Link href={`/orgs/${org.id}`} className={cn(buttonVariants({ variant: "primary" }), "mt-5")}>
+          <Link href="/integrations" className={cn(buttonVariants({ variant: "primary" }), "mt-5")}>
             Connect GitHub
           </Link>
         </Card>

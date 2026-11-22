@@ -8,6 +8,7 @@ import { GithubPanel } from "@/components/github-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-provider";
 import { Badge } from "@/components/ui/badge";
+import { SystemStatus } from "@/components/system-status";
 import { Card } from "@/components/ui/card";
 import { orgApi } from "@/lib/api";
 import { accessToken } from "@/lib/supabase/token";
@@ -50,6 +51,14 @@ export function IntegrationsPage() {
           writes to GitHub. Details are in <code className="font-mono">docs/GITHUB.md</code>.
         </p>
       </Card>
+
+      <section className="mt-10" aria-label="Services">
+        <h2 className="text-lg font-medium">Services</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Whether the server can reach what it depends on.</p>
+        <div className="mt-3">
+          <SystemStatus />
+        </div>
+      </section>
 
       <GithubPanel orgId={orgId} isAdmin={isAdmin} />
 

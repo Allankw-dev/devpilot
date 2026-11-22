@@ -43,7 +43,7 @@ Setup, including the webhook tunnel for local testing, is in [`docs/GITHUB.md`](
 ## AI
 
 Gemini through a provider abstraction (Anthropic optional). Needs an API key and model names in
-`.env`; see [`docs/AI.md`](docs/AI.md). Verify with **Test AI connection** on an organization page.
+`.env`; see [`docs/AI.md`](docs/AI.md). Verify with **Test AI connection** on the Integrations page.
 
 ## Background jobs and code search
 

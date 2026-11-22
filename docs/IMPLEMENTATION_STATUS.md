@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone E (the Assistant)**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -13,7 +13,7 @@ development log maps one to the other.
 |---|---|
 | API on SQLite | 711 passed, 14 skipped (the skipped ones need PostgreSQL) |
 | API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped |
-| Web (Vitest) | 203 passed |
+| Web (Vitest) | 217 passed |
 | Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -31,12 +31,12 @@ The new web shell was built and unit-tested but has **not yet been checked in a 
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)
-- [x] Routed pages: Dashboard, Repositories, Assistant, Code Reviews, CI/CD, Analytics,
-      Integrations, Team, Settings
+- [x] Routed pages: Dashboard, Repositories, Assistant, Code Search, Code Reviews, CI/CD,
+      Analytics, Integrations, Team, Settings
 - [ ] Brief pages with no feature behind them yet, so no page: test generator, issues and
       planning, documentation, code health
-- [ ] The **Workspace** page still exists and repeats some of the new pages' content (code search
-      still only lives there); retire it once nothing unique is left
+- [x] The old all-in-one **Workspace** page is retired: its sections live on the pages above, and
+      `/orgs/{id}` now redirects to the dashboard
 - [ ] Settings sections from the brief that don't exist yet: notifications, security, API keys,
       subscription (no placeholders are shown for them)
 - [ ] shadcn/ui components beyond Button and Card, Monaco, React Hook Form, Zod, React Flow

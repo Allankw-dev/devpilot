@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { orgApi } from "@/lib/api";
 import { accessToken } from "@/lib/supabase/token";
+import { useWorkspaceStore } from "@/lib/workspace";
 
 // GitHub sends the browser here after the app is installed. The one-time `code` and the
 // installation id are handed to our API, which verifies them with GitHub.
@@ -25,13 +26,13 @@ export function GithubCallback() {
 
     if (params.get("setup_action") === "request") {
       setMessage(
-        "Your request was sent to the GitHub organization’s owners. Once they approve it, connect again from your organization page.",
+        "Your request was sent to the GitHub organization’s owners. Once they approve it, connect again from the Integrations page.",
       );
       return;
     }
     if (!code || !Number.isInteger(installationId) || installationId <= 0) {
       setFailed(true);
-      setMessage("This link is missing information from GitHub. Start again from your organization page.");
+      setMessage("This link is missing information from GitHub. Start again from the Integrations page.");
       return;
     }
 
@@ -42,7 +43,8 @@ export function GithubCallback() {
           installation_id: installationId,
           state: params.get("state"),
         });
-        router.replace(`/orgs/${installation.org_id}`);
+        useWorkspaceStore.getState().select(installation.org_id); // show the workspace you just connected
+        router.replace("/integrations");
       } catch (e) {
         setFailed(true);
         setMessage(e instanceof Error ? e.message : "Could not finish connecting GitHub.");

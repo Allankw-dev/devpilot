@@ -92,8 +92,8 @@ describe("<DashboardHome>", () => {
     dashboardGet.mockResolvedValue(data({ github_connected: false }));
     renderWithQuery(<DashboardHome />);
     const cta = await screen.findByRole("link", { name: "Connect GitHub" });
-    expect(cta).toHaveAttribute("href", "/orgs/org-1");
-    expect(screen.queryByText("Repositories")).not.toBeInTheDocument(); // no fake numbers
+    expect(cta).toHaveAttribute("href", "/integrations");
+    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument(); // no fake numbers
   });
 
   it("shows the real numbers and lists", async () => {
@@ -109,6 +109,16 @@ describe("<DashboardHome>", () => {
     expect(pr).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText(/3 open findings/)).toBeInTheDocument();
     expect(screen.getByText(/1 serious/)).toBeInTheDocument();
+  });
+
+  it("sends each list's View all to the page that really lists those things", async () => {
+    dashboardGet.mockResolvedValue(data());
+    renderWithQuery(<DashboardHome />);
+    await screen.findByRole("region", { name: "Summary" });
+    const hrefs = screen.getAllByRole("link", { name: "View all" }).map((l) => l.getAttribute("href"));
+    expect(hrefs).toEqual(["/code-reviews", "/code-reviews", "/ci-cd"]); // issues have no all-issues page
+    expect(screen.getByRole("link", { name: "Repositories" })).toHaveAttribute("href", "/repositories");
+    expect(document.querySelector('a[href^="/orgs/"]')).toBeNull(); // the old page is gone
   });
 
   it("explains empty lists instead of leaving blanks", async () => {

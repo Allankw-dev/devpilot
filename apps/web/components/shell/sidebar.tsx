@@ -65,37 +65,25 @@ export function Sidebar({
 
       <nav aria-label="Main" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {NAV_ITEMS.map((item) => {
-          const href = item.href(org?.id ?? null);
           const active = item.match(pathname);
           const Icon = item.icon;
-          const cls = cn(
-            "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm",
-            collapsed && "justify-center",
-            active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            !href && "pointer-events-none opacity-50",
-          );
-          const content = (
-            <>
-              <Icon className="h-4 w-4 shrink-0" aria-hidden />
-              {collapsed ? <span className="sr-only">{item.label}</span> : <span>{item.label}</span>}
-            </>
-          );
-          return href ? (
+          return (
             <Link
               key={item.id}
-              href={href}
+              href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               title={collapsed ? item.label : undefined}
-              className={cls}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm",
+                collapsed && "justify-center",
+                active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
             >
-              {content}
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              {collapsed ? <span className="sr-only">{item.label}</span> : <span>{item.label}</span>}
             </Link>
-          ) : (
-            <span key={item.id} aria-disabled="true" className={cls}>
-              {content}
-            </span>
-          )
+          );
         })}
       </nav>
 

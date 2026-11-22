@@ -34,24 +34,27 @@ describe("<Sidebar>", () => {
   it("lists the pages that exist and marks the current one", () => {
     render(<Sidebar collapsed={false} />);
     const nav = screen.getByRole("navigation", { name: "Main" });
-    expect(nav).toHaveTextContent("Dashboard");
-    expect(nav).toHaveTextContent("Workspace");
+    for (const label of ["Dashboard", "Repositories", "Assistant", "Code Search", "Code Reviews", "CI/CD", "Analytics", "Integrations", "Team", "Settings"]) {
+      expect(nav).toHaveTextContent(label);
+    }
+    expect(nav).not.toHaveTextContent("Workspace");
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Workspace" })).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("link", { name: "Workspace" })).toHaveAttribute("href", "/orgs/org-1");
+    expect(screen.getByRole("link", { name: "Repositories" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Repositories" })).toHaveAttribute("href", "/repositories");
   });
 
-  it("marks the workspace page active under /orgs", () => {
-    pathname = "/orgs/org-1";
+  it("marks a section active on its inner pages too", () => {
+    pathname = "/code-reviews/pr-1";
     render(<Sidebar collapsed={false} />);
-    expect(screen.getByRole("link", { name: "Workspace" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Code Reviews" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 
-  it("shows the Workspace item as unavailable until you have a workspace", () => {
+  it("keeps every page reachable even before you have a workspace", () => {
     currentOrg = null;
     render(<Sidebar collapsed={false} />);
-    expect(screen.queryByRole("link", { name: "Workspace" })).not.toBeInTheDocument();
-    expect(screen.getByText("Workspace").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getAllByRole("link").length).toBeGreaterThanOrEqual(10);
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
   });
 
   it("shows who you are, your role, and the usage meter", () => {
@@ -85,7 +88,7 @@ describe("<Sidebar>", () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     render(<Sidebar collapsed={false} onNavigate={onNavigate} />);
-    await user.click(screen.getByRole("link", { name: "Workspace" }));
+    await user.click(screen.getByRole("link", { name: "Repositories" }));
     expect(onNavigate).toHaveBeenCalled();
   });
 

@@ -31,7 +31,7 @@ export function RepoCommits({ orgId, repoId }: { orgId: string; repoId: string }
       </p>
     );
   if (rows.length === 0)
-    return <p className="text-sm text-muted-foreground">No commits stored yet. Sync GitHub from the Workspace page.</p>;
+    return <p className="text-sm text-muted-foreground">No commits stored yet. Sync GitHub from the Integrations page.</p>;
 
   return (
     <Card>

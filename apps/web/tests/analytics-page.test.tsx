@@ -14,6 +14,9 @@ vi.mock("recharts", () => {
   const Box = ({ children }: { children?: React.ReactNode }) => <div data-testid="chart">{children}</div>;
   return { ResponsiveContainer: Box, BarChart: Box, Bar: Box, Cell: Box, CartesianGrid: Box, XAxis: Box, YAxis: Box, Tooltip: Box, Legend: Box };
 });
+vi.mock("@/components/usage-dashboard", () => ({
+  UsageDashboard: ({ orgId }: { orgId: string }) => <div>ai usage details for {orgId}</div>,
+}));
 vi.mock("@/lib/supabase/token", () => ({ accessToken: async () => "token" }));
 vi.mock("@/components/shell/workspace-provider", () => ({
   useWorkspace: () => ({ me: {}, orgs: [], org: currentOrg, select: vi.fn() }),
@@ -114,6 +117,12 @@ describe("<AnalyticsPage>", () => {
     await waitFor(() => expect(analyticsGet).toHaveBeenCalledWith("token", "org-1", 7));
     expect(screen.getByRole("button", { name: "7 days" })).toHaveAttribute("aria-pressed", "true");
     expect(usageGet).toHaveBeenCalledWith("token", "org-1", 7);
+  });
+
+  it("includes the detailed AI usage: calls, quota status, features and models", async () => {
+    analyticsGet.mockResolvedValue(analytics());
+    renderWithQuery(<AnalyticsPage />);
+    expect(await screen.findByText("ai usage details for org-1")).toBeInTheDocument();
   });
 
   it("says these are activity counts, not productivity", async () => {

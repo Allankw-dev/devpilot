@@ -16,6 +16,7 @@ import {
 
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-provider";
+import { UsageDashboard } from "@/components/usage-dashboard";
 import { Card, CardHeader } from "@/components/ui/card";
 import { aiApi, analyticsApi, ApiError, type Analytics } from "@/lib/api";
 import { formatPercent, formatSeconds } from "@/lib/duration";
@@ -243,6 +244,8 @@ export function AnalyticsPage() {
           </p>
         </div>
       )}
+
+      <UsageDashboard orgId={orgId} />
     </>
   );
 }

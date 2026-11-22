@@ -5,7 +5,7 @@ Ask in plain language and get an answer that cites the files and lines it used.
 ## Try it
 
 1. Index at least one repository (`docs/INDEXING.md`).
-2. On the organization page, open **Ask about your code**, type a question (or click an example),
+2. Open **Assistant**, type a question (or click an example),
    optionally choose one repository, and press **Ask** (or Ctrl+Enter).
 3. Click a `[1]` marker or an entry under **Sources** to open those exact lines on GitHub.
 

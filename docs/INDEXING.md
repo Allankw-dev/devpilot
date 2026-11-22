@@ -7,7 +7,7 @@ can find the right code without sending whole repositories to an AI model.
 
 1. Make sure AI is set up (`docs/AI.md`), including `GEMINI_EMBEDDING_MODEL`.
 2. Start the **worker** (below), or set `JOB_BACKEND=inline` to run jobs inside the API instead.
-3. Open an organization page. In the repository table click **Index** next to a repository.
+3. Open **Repositories**, open a repository, and click **Index** on its Overview tab.
 4. When it says "N chunks", use **Search code** under the table.
 
 Members, admins and owners can index and search. Viewers can see index status only.

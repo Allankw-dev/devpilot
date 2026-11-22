@@ -36,7 +36,7 @@ describe("<RepoList>", () => {
     reposGet.mockResolvedValue([]);
     renderWithQuery(<RepoList />);
     expect(await screen.findByText("No repositories yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Connect GitHub" })).toHaveAttribute("href", "/orgs/org-1");
+    expect(screen.getByRole("link", { name: "Connect GitHub" })).toHaveAttribute("href", "/integrations");
   });
 
   it("lists repositories with links to their pages and real details", async () => {

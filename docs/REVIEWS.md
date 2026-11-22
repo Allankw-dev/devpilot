@@ -10,7 +10,7 @@ what to do with it. Use **Copy as Markdown** to paste a review into a GitHub com
 ## Try it
 
 1. Sync GitHub (**Sync now**) so your pull requests appear.
-2. On the organization page, open **Pull requests** and click **Review** on one.
+2. Open **Code Reviews** and click **Review** on one.
 3. It goes Queued, then Reviewing, then shows the summary, a risk level and the findings. Click a
    file name to open those exact lines on GitHub.
 4. **Dismiss** a finding you don't agree with. It stays hidden for everyone (use **Show dismissed**

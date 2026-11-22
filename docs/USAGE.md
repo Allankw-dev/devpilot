@@ -1,6 +1,6 @@
 # AI usage
 
-The **AI usage** section on the organization page shows where your AI requests, tokens and errors
+The **AI usage** section at the bottom of the **Analytics** page shows where your AI requests, tokens and errors
 went, so you can see why you're hitting limits before you hit them. Everyone in the organization
 can see it. Nothing about prompts or replies is stored or shown: only counts, token numbers,
 model names and error types.

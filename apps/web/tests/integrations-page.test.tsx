@@ -12,6 +12,7 @@ vi.mock("@/lib/supabase/token", () => ({ accessToken: async () => "token" }));
 vi.mock("@/components/shell/workspace-provider", () => ({
   useWorkspace: () => ({ me: {}, orgs: [], org: hasOrg ? { ...ORG, role } : null, select: vi.fn() }),
 }));
+vi.mock("@/components/system-status", () => ({ SystemStatus: () => <div>service status list</div> }));
 vi.mock("@/components/github-panel", () => ({
   GithubPanel: ({ isAdmin }: { isAdmin: boolean }) => <div>github panel (admin: {String(isAdmin)})</div>,
 }));
@@ -41,6 +42,11 @@ describe("<IntegrationsPage>", () => {
     expect(screen.getByText("read-only")).toBeInTheDocument();
     expect(screen.getByText(/never writes to GitHub/)).toBeInTheDocument();
     expect(screen.getByText(/Secret values are never shown here/)).toBeInTheDocument();
+  });
+
+  it("shows whether the server can reach what it depends on", () => {
+    renderWithQuery(<IntegrationsPage />);
+    expect(screen.getByRole("region", { name: "Services" })).toHaveTextContent("service status list");
   });
 
   it("shows the GitHub and AI provider panels, telling them whether you are an admin", () => {

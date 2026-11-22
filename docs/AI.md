@@ -18,7 +18,7 @@ GEMINI_MODEL=...
 GEMINI_EMBEDDING_MODEL=...
 ```
 
-4. Open an organization page. As an admin you'll see the AI section; click
+4. Open **Integrations**. As an admin you'll see the AI section; click
    **Test AI connection**. It sends one tiny prompt and shows latency and tokens.
 
 The API key stays on the server. The browser never sees it, and the status endpoint only
@@ -29,25 +29,6 @@ reports setting *names* that are missing, never values.
 Set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. Anthropic has no
 embeddings API, so embeddings stay on Gemini (`GEMINI_API_KEY` + `GEMINI_EMBEDDING_MODEL`).
 Using Claude Code to develop this project needs no Anthropic key here.
-
-## Groq and OpenRouter fallbacks
-
-Configure either provider (or both) to continue generation when Gemini or Anthropic hits a
-temporary rate limit, is unavailable, or spends its daily quota:
-
-```
-GROQ_API_KEY=...
-GROQ_MODEL=...
-OPENROUTER_API_KEY=...
-OPENROUTER_MODEL=...
-```
-
-Groq is tried first and OpenRouter second. The primary provider remains
-`LLM_PROVIDER=gemini` or `LLM_PROVIDER=anthropic`. Authentication and malformed-request errors
-are not retried against fallback providers.
-
-You may also select `LLM_PROVIDER=groq` or `LLM_PROVIDER=openrouter` as the primary provider.
-Embeddings remain on Gemini; those fallback providers only handle text generation.
 
 ## What `LLMService` gives every feature
 
@@ -68,7 +49,7 @@ indexing fail at once with a clear message, and Ask and the connection test retu
 the same, including roughly when it resets if Google says. Fix it by waiting, turning on billing,
 or switching `GEMINI_MODEL` to a model with a bigger allowance.
 
-The **AI usage** panel on the organization page shows calls, tokens and errors per feature and
+The **AI usage** section on the Analytics page shows calls, tokens and errors per feature and
 model (`docs/USAGE.md`).
 
 ## Rules when writing prompts
