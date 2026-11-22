@@ -239,9 +239,14 @@ def run_analysis(
             return "failed"
 
 
-def _problem_for(exc: GitHubError) -> str:
+NEVER_STARTED = "the job never started, so it has no log"
+
+
+def _problem_for(exc: GitHubError, ran: bool) -> str:
+    """Why a job's log couldn't be read. A failed job with no steps never ran at all (for example
+    a runner or billing problem), which is a different story from a log that has expired."""
     if exc.status in (404, 410):
-        return "log expired or removed"
+        return "log expired or removed" if ran else NEVER_STARTED
     if exc.status in (401, 403):
         return "access denied"
     if exc.status == 413:
@@ -300,7 +305,8 @@ def _analyze(
         except GitHubError as exc:
             if exc.status is None or exc.status >= 500:
                 raise  # transient: try the whole analysis again later
-            inputs.append(JobInput(name, conclusion, steps, None, _problem_for(exc)))
+            ran = bool(job.get("steps"))
+            inputs.append(JobInput(name, conclusion, steps, None, _problem_for(exc, ran)))
             continue
         excerpt = build_excerpt(raw, max_chars=per_job, cut_before=cut)
         if not excerpt.text:
@@ -312,7 +318,13 @@ def _analyze(
 
     if not any(j.excerpt is not None for j in inputs):
         why = "; ".join(f"{j.name}: {j.problem}" for j in inputs)
-        raise CiFailed(f"No log could be read for this run ({why}).")
+        hint = ""
+        if any(j.problem == NEVER_STARTED for j in inputs):
+            hint = (
+                " Open the run on GitHub to see why: jobs that never start, for example because "
+                "of a runner or billing problem, have no log."
+            )
+        raise CiFailed(f"No log could be read for this run ({why}).{hint}")
 
     result = analyze_failure(
         llm,

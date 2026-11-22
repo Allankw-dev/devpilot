@@ -3,6 +3,20 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Fixes after first real use (2026-11-22)
+
+- **CI analysis, jobs that never started.** A real failed run (a fresh one, with both jobs failed
+  and no steps) was reported as "log expired or removed", which was wrong: logs last about 90 days
+  and this run was minutes old. A failed job with no recorded steps is now reported as "the job
+  never started, so it has no log", and the failure message tells you to open the run on GitHub to
+  see why (for example a runner or billing problem). A job that did run but whose log is gone is
+  still called expired. Three new tests; 711 API tests on SQLite plus these still pass.
+- **Sidebar on short windows.** In a small browser panel only five page links were visible. On
+  windows under 760 px tall the Help link is hidden and the bottom block is tighter, so the page
+  links keep their room (the usage meter stays).
+- Seen in the screenshot and not a bug: the usage meter showing 36 / 20 means 36 AI calls in 24
+  hours against a 20-call free-tier limit, which is also why AI features were failing.
+
 ## Phase 10, milestone F: navigation finished, Workspace page retired
 
 - **Code Search** (`/search`) is its own page. The AI usage detail (calls, quota status, features,

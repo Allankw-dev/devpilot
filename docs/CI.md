@@ -75,7 +75,8 @@ Logs are **not stored**. Only the short quotes that back the answer are kept.
 |---|---|
 | Stuck on "Queued…" | worker not running, or it can't reach Redis |
 | "GitHub denied access to this run" | the app needs *Actions: read*, or the repository is no longer shared with it |
-| "No log could be read for this run" | logs expired, were removed, or were empty |
+| "No log could be read for this run" | logs expired (GitHub keeps them about 90 days), were removed, or were empty |
+| "the job never started, so it has no log" | the job failed before any step ran, for example a runner or billing problem. Open the run on GitHub: it shows the reason at the top |
 | "GitHub reports no failed jobs" | the run failed before any job started: check the workflow file on GitHub |
 | "The AI returned an analysis that could not be used" | the model broke the format: click Retry, or raise `CI_MAX_OUTPUT_TOKENS` |
 | "AI isn't set up on the server yet" | fill in `GEMINI_API_KEY` and `GEMINI_MODEL` (`docs/AI.md`) |

@@ -87,7 +87,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="space-y-3 border-t border-border p-3">
+      {/* On short windows the bottom block is made smaller so the page links keep their room. */}
+      <div className="space-y-3 border-t border-border p-3 [@media(max-height:760px)]:space-y-1.5 [@media(max-height:760px)]:p-2">
         {!collapsed && org && <UsageMeter orgId={org.id} />}
         <a
           href={config.docsUrl}
@@ -95,7 +96,7 @@ export function Sidebar({
           rel="noopener noreferrer"
           title={collapsed ? "Help and documentation" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
+            "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground [@media(max-height:760px)]:hidden",
             collapsed && "justify-center",
           )}
         >

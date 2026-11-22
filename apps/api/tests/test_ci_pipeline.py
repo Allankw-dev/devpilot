@@ -76,7 +76,9 @@ def test_the_model_sees_cleaned_logs_of_failed_jobs_only(env: CiEnv) -> None:
     assert "Repository: octo-org/web" in prompt and "Workflow: CI" in prompt
 
 
-def test_usage_is_recorded_against_the_ci_feature(env: CiEnv, session_factory: sessionmaker[Session]) -> None:
+def test_usage_is_recorded_against_the_ci_feature(
+    env: CiEnv, session_factory: sessionmaker[Session]
+) -> None:
     env.script(analysis_json())
     env.run()
     with session_factory() as db:
@@ -122,6 +124,36 @@ def test_no_readable_log_at_all_fails_clearly_without_spending_tokens(env: CiEnv
     assert env.generation.requests == []
 
 
+def test_a_failed_job_that_never_ran_is_not_blamed_on_log_expiry(env: CiEnv) -> None:
+    never_ran = make_job(201, "test", failed_step=None)
+    never_ran["steps"] = []  # GitHub records no steps for a job that never started
+    env.set_jobs(FAILED_RUN, never_ran, make_job(202, "lint", failed_step=None) | {"steps": []})
+    env.fake.data["octo-org/web"]["job_logs"].clear()
+    assert env.run() == "failed"
+    error = env.analysis().error or ""
+    assert "the job never started, so it has no log" in error
+    assert "expired" not in error
+    assert "Open the run on GitHub" in error and env.generation.requests == []
+
+
+def test_one_job_that_never_ran_is_reported_while_the_other_is_still_analyzed(env: CiEnv) -> None:
+    never_ran = make_job(202, "lint", failed_step=None)
+    never_ran["steps"] = []
+    env.set_jobs(FAILED_RUN, make_job(201, "test", failed_step="Run tests"), never_ran)
+    del env.fake.data["octo-org/web"]["job_logs"][202]
+    env.script(analysis_json(evidence=[]))
+    assert env.run() == "ready"
+    notes = env.analysis().notes or ""
+    assert "No log for: lint (the job never started, so it has no log)." in notes
+
+
+def test_a_job_that_ran_but_whose_log_is_gone_is_still_called_expired(env: CiEnv) -> None:
+    del env.fake.data["octo-org/web"]["job_logs"][202]  # it has steps, so it did run
+    env.script(analysis_json(evidence=[]))
+    assert env.run() == "ready"
+    assert "No log for: lint (log expired or removed)." in (env.analysis().notes or "")
+
+
 def test_an_empty_log_counts_as_missing(env: CiEnv) -> None:
     env.set_log(201, "\n\n")
     env.set_log(202, "")
@@ -146,7 +178,9 @@ def test_only_the_configured_number_of_jobs_is_read(env: CiEnv) -> None:
 
 
 def test_a_timed_out_run_can_be_analyzed_too(env: CiEnv) -> None:
-    env.set_jobs(TIMED_OUT_RUN, make_job(401, "slow", conclusion="timed_out", failed_step="Run e2e"))
+    env.set_jobs(
+        TIMED_OUT_RUN, make_job(401, "slow", conclusion="timed_out", failed_step="Run e2e")
+    )
     env.set_log(401, "e2e: waiting for server\nERROR: The operation was canceled.\n")
     env.script(analysis_json(category="flaky_or_timeout", evidence=[]))
     assert env.run(run=TIMED_OUT_RUN) == "ready"
@@ -173,7 +207,9 @@ def test_invented_quotes_never_reach_the_stored_analysis(env: CiEnv) -> None:
 
 
 def test_high_confidence_with_only_invented_quotes_becomes_medium(env: CiEnv) -> None:
-    env.script(analysis_json(confidence="high", evidence=[{"job": "test", "quote": "not in the log"}]))
+    env.script(
+        analysis_json(confidence="high", evidence=[{"job": "test", "quote": "not in the log"}])
+    )
     env.run()
     a = env.analysis()
     assert a.evidence == [] and a.confidence == "medium"
@@ -226,7 +262,9 @@ def test_missing_actions_permission_tells_the_user_what_to_check(env: CiEnv) -> 
     assert "Actions: read" in (env.analysis().error or "")
 
 
-def test_a_suspended_installation_is_not_analyzed(env: CiEnv, session_factory: sessionmaker[Session]) -> None:
+def test_a_suspended_installation_is_not_analyzed(
+    env: CiEnv, session_factory: sessionmaker[Session]
+) -> None:
     from app.db.models import GithubInstallation
 
     with session_factory() as db:
@@ -263,7 +301,9 @@ def test_a_job_that_is_running_elsewhere_is_busy_until_its_heartbeat_goes_stale(
     assert env.run(analysis) == "busy"
 
     with session_factory() as db:
-        db.execute(update(CiAnalysis).values(heartbeat_at=datetime.now(UTC) - timedelta(minutes=30)))
+        db.execute(
+            update(CiAnalysis).values(heartbeat_at=datetime.now(UTC) - timedelta(minutes=30))
+        )
         db.commit()
     env.script(analysis_json())
     assert env.run(analysis) == "ready"  # the dead worker's job is taken over
@@ -287,7 +327,9 @@ def test_request_states(env: CiEnv, session_factory: sessionmaker[Session]) -> N
     assert env.request().outcome == "created"
 
 
-def test_a_stale_queued_request_can_be_replaced(env: CiEnv, session_factory: sessionmaker[Session]) -> None:
+def test_a_stale_queued_request_can_be_replaced(
+    env: CiEnv, session_factory: sessionmaker[Session]
+) -> None:
     first = env.request()
     with session_factory() as db:
         db.execute(update(CiAnalysis).values(queued_at=datetime.now(UTC) - timedelta(hours=2)))
@@ -296,7 +338,9 @@ def test_a_stale_queued_request_can_be_replaced(env: CiEnv, session_factory: ses
     assert again.outcome == "created" and again.analysis.id != first.analysis.id
 
 
-def test_request_analysis_for_a_deleted_run_raises(env: CiEnv, session_factory: sessionmaker[Session]) -> None:
+def test_request_analysis_for_a_deleted_run_raises(
+    env: CiEnv, session_factory: sessionmaker[Session]
+) -> None:
     from sqlalchemy.exc import IntegrityError
 
     from app.db.models import WorkflowRun
