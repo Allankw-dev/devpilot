@@ -1,4 +1,4 @@
-# DevPilot AI..
+# DevPilot AI.
 
 AI developer productivity platform. See `CLAUDE.md` for project rules and `docs/VERSIONS.md` for versions.
 
