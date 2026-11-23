@@ -26,7 +26,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3001. The page shows API, database and Redis status.
+Open http://localhost:3001. The page shows API, database and Redis status./
 Health endpoint: http://localhost:8001/api/v1/health
 
 ## Auth
