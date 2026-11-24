@@ -3,6 +3,23 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Open-source readiness (2026-11-24)
+
+- Added `LICENSE` (Apache-2.0) and `NOTICE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor
+  Covenant 2.1), `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `ROADMAP.md`, issue forms, a pull
+  request template and Dependabot (npm and GitHub Actions). New guide: `docs/SELF_HOSTING.md`.
+- Found by reading the repo against the full project brief, and fixed: the README and `.env.example`
+  said PostgreSQL is on host port 5433 while `docker-compose.yml` uses 15433; a stray `/` and a
+  trailing period in the README; the empty "echo Hello" `.vscode/tasks.json` template was removed.
+- Found and recorded, not changed: `npm audit` now reports 2 findings, not 13 (see Known issues in
+  `IMPLEMENTATION_STATUS.md`); a stored-credentials gap suspected during the review does not exist, because
+  the app keeps no tokens or keys in the database (GitHub installation tokens are cached in memory).
+- Verified on a fresh clone: ruff and mypy clean; API 719 passed, 14 skipped (SQLite); web lint,
+  `tsc`, 217 tests and the production build pass. **Not** run: the PostgreSQL suite, `alembic check`,
+  Docker Compose, anything in a browser. This change is documentation and templates only.
+- Open: switch on private vulnerability reporting and Discussions in the repository settings; then the
+  security basics listed under "Now" in `ROADMAP.md`.
+
 ## Fixes after first real use (2026-11-22)
 
 - **CI analysis, jobs that never started.** A real failed run (a fresh one, with both jobs failed

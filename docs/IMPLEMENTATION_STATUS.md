@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)**.
+the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)** and the open-source readiness step (2026-11-24).
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,15 +11,15 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 711 passed, 14 skipped (the skipped ones need PostgreSQL) |
-| API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped |
-| Web (Vitest) | 217 passed |
-| Lint and types | ruff, mypy, ESLint and `tsc` clean |
+| API on SQLite | 719 passed, 14 skipped (the skipped ones need PostgreSQL); re-run 2026-11-24 on a fresh clone |
+| API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped (earlier run, not repeated on 2026-11-24) |
+| Web (Vitest) | 217 passed (re-run 2026-11-24) |
+| Lint, types, build | ruff, mypy, ESLint, `tsc` and the production build clean (re-run 2026-11-24) |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
 
-The new web shell was built and unit-tested but has **not yet been checked in a real browser**
-(including on a phone-sized screen). Check it by eye before relying on the layout.
+The new web shell has been opened in a browser (2026-11-22) but **not on a phone-sized screen**, and there
+are no end-to-end tests. Check the layout by eye before relying on it.
 
 ## Brief phase 1: foundation and UI: partly done
 
@@ -104,13 +104,28 @@ Test generation, sandboxed execution and coverage are all still to do.
 - [ ] Load testing, security review, backup and recovery documentation
 - [ ] Final production-readiness assessment
 
+## Open source and community: partly done
+
+- [x] Apache-2.0 `LICENSE` and `NOTICE`
+- [x] `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `ROADMAP.md`
+- [x] Issue forms, pull request template, Dependabot for npm and GitHub Actions
+- [x] `docs/SELF_HOSTING.md` (development setup only; the steps were not run end to end on a clean machine)
+- [ ] Switch on **private vulnerability reporting** and **Discussions** in the GitHub repository
+      settings (`SECURITY.md` and the issue chooser link to them; this cannot be done from the code)
+- [ ] Docs the brief names that don't exist yet: `DATABASE.md`, a threat model in `docs/SECURITY.md`,
+      `SCALABILITY.md`, `OPERATIONS.md`, `AI_SYSTEM.md`
+- [ ] Dependabot for the Python dependencies (they are pinned in `requirements.lock`, which it doesn't read)
+- [ ] Plugin SDK, plugin examples, good-first-issue labels, public discussions
+
 ## Known issues
 
-- **Dependency vulnerabilities.** `npm audit` reports 13 production findings (1 moderate, 12 high)
-  in `apps/web`. They are the same before and after Phase 10. They come from Next 15 (a bundled
-  PostCSS) and the Tailwind 3 toolchain (`picomatch`, which has no fix yet). The Next fix is Next
-  16.4.6, which also needs the middleware-to-proxy migration and Tailwind 4. Plan this in the
-  hardening phase.
+- **Dependency vulnerabilities.** `npm audit --omit=dev` (re-run 2026-11-24 on a fresh install)
+  reports 2 production findings in `apps/web` (1 moderate, 1 high), both from a PostCSS copy bundled
+  inside Next 15. The advisories concern PostCSS stringifying CSS and reading source maps; the app's
+  CSS is its own, so exploitability looks low, but it should still be fixed. The fix is Next 16.4.6,
+  a breaking upgrade that also needs the middleware-to-proxy migration and Tailwind 4. An earlier
+  count of 13 also listed the Tailwind toolchain (`picomatch`); that no longer appears. Plan the
+  upgrade in the hardening phase.
 - **Dashboard weight.** `/dashboard` loads about 331 kB of JavaScript because of the chart library.
 - **Free-tier AI quota.** A free Gemini key allows about 20 requests a day per model; see `docs/USAGE.md`.
 - **Nav.** The sidebar lists only pages that work. Features are added to `lib/nav.ts` when they exist.

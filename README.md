@@ -1,10 +1,16 @@
 # DevPilot AI.
 
-AI developer productivity platform. See `CLAUDE.md` for project rules and `docs/VERSIONS.md` for versions.
+Your AI engineering partner. Open-source AI developer productivity platform: index your repositories,
+ask questions about your code with checked citations, review pull requests and understand failed CI runs.
+
+**Status: early development.** GitHub access is read-only, and there is no production deployment guide yet.
+See [`ROADMAP.md`](ROADMAP.md) for what is planned and [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md)
+for what works today. Project rules are in `CLAUDE.md`; versions are in `docs/VERSIONS.md`.
 
 ## Local setup
 
-Prerequisites: Docker, Python 3.12+, Node 22+.
+Prerequisites: Docker, Python 3.12+, Node 22+. The full walkthrough (Supabase, GitHub App, AI key,
+what data leaves your machine) is in [`docs/SELF_HOSTING.md`](docs/SELF_HOSTING.md).
 
 ```powershell
 copy .env.example .env
@@ -95,7 +101,7 @@ DevPilot uses non-default host ports so it doesn't clash with other dev tools
 |---|---|
 | Web | 3001 |
 | API | 8001 |
-| Postgres (Docker) | 5433 |
+| Postgres (Docker) | 15433 |
 | Redis (Docker) | 6380 |
 
 ## Checks
@@ -104,3 +110,16 @@ DevPilot uses non-default host ports so it doesn't clash with other dev tools
 cd apps\api; pytest; ruff check .; mypy .; alembic check
 cd apps\web; npm run lint; npm run typecheck; npm run build
 ```
+
+## Contributing
+
+Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first, and follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Need help? See [`SUPPORT.md`](SUPPORT.md).
+
+## Security
+
+Report vulnerabilities privately, not as public issues: see [`SECURITY.md`](SECURITY.md).
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
