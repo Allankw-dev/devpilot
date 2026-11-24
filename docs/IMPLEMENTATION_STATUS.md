@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)** and the open-source readiness step (2026-11-24).
+the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)** the open-source readiness step and security foundations milestone A (2026-11-24).
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,9 +11,9 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 719 passed, 14 skipped (the skipped ones need PostgreSQL); re-run 2026-11-24 on a fresh clone |
+| API on SQLite | 760 passed, 14 skipped (the skipped ones need PostgreSQL); re-run 2026-11-24 |
 | API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped (earlier run, not repeated on 2026-11-24) |
-| Web (Vitest) | 217 passed (re-run 2026-11-24) |
+| Web (Vitest) | 225 passed (re-run 2026-11-24) |
 | Lint, types, build | ruff, mypy, ESLint, `tsc` and the production build clean (re-run 2026-11-24) |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
@@ -100,9 +100,24 @@ Test generation, sandboxed execution and coverage are all still to do.
 ## Brief phase 8: production hardening: not started
 
 - [x] CI workflow runs lint, types, tests and build for both apps
-- [ ] Sentry, OpenTelemetry, health checks beyond `/health`, production Dockerfiles
+- [x] Liveness and readiness endpoints (`/health/live`, `/health/ready`)
+- [ ] Sentry, OpenTelemetry, production Dockerfiles
 - [ ] Load testing, security review, backup and recovery documentation
 - [ ] Final production-readiness assessment
+
+## Security and operations foundations (brief sections 6 and 15): started
+
+Milestone A, with tests:
+
+- [x] API: security headers, request ids, access log without query strings, JSON 500 without details,
+      CORS limited to the methods and headers the web app uses, API docs off in production, HSTS in production
+- [x] Web: nosniff, referrer and permissions policies; framing protection and HSTS in production
+- [x] Database connection timeout
+- [ ] Web Content-Security-Policy **enforced** (it is report-only; needs a look at the browser console first)
+- [ ] Checked in a real browser: the CSP console output and the production-mode headers on a deployed site
+- [ ] Audit log, atomic AI usage limits, cancelling running jobs (milestone B)
+- [ ] PostgreSQL row-level security, statement timeouts, rate limits beyond the AI features (later)
+- [ ] Metrics, tracing, queue-depth and worker health, Sentry, dependency scanning in CI
 
 ## Open source and community: partly done
 

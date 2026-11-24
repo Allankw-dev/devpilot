@@ -25,6 +25,12 @@ Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worke
   the real diff server-side, credential-looking lines never go to the model, and the app stays read-only.
 - Indexed chunks hold repository content: always scope reads by organization, and never log chunk text.
 - CI logs are untrusted and may hold secrets: redact credential-looking lines before the model sees them, never store raw logs, check every quoted log line against what was sent, and never re-run or change a workflow.
+- Every API response carries `X-Request-ID`, and every log line written during a request shares it.
+  Never log query strings, headers, request bodies, tokens or chunk text. Health probes stay quiet.
+- `/health/live` touches no dependency; `/health/ready` checks PostgreSQL and Redis and returns 503 when
+  either is down. Neither ever returns the cause of a failure.
+- Web security headers live in `apps/web/lib/security-headers.mjs`. The CSP is report-only until it has
+  been checked in a browser; framing and HSTS headers are production-only (VS Code's browser frames the dev page).
 
 ## Commands
 - API: `cd apps/api && pytest && ruff check . && mypy .`

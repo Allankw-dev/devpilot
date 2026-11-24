@@ -3,6 +3,31 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Security foundations, milestone A (2026-11-24)
+
+- API: new `core/middleware.py` (pure ASGI, so streaming still works) gives each request an id,
+  adds security headers, writes one access-log line and turns unexpected errors into a JSON 500 that
+  names only the request id. `core/logging.py` now adds `request_id` and the access fields to the JSON
+  log. New `/health/live` and `/health/ready`; `/health` unchanged for the web status panel.
+- Decisions: the middleware sits inside CORS so error responses still carry CORS headers; a caller's
+  `X-Request-ID` is kept only if it is 8 to 64 characters of `A-Za-z0-9._-`; the access log never holds
+  the query string, headers, body or client IP; API docs are off and HSTS is on when
+  `ENVIRONMENT=production`; CORS methods and headers narrowed to what `lib/api.ts` sends; DB connect
+  timeout 5 s; a failed health probe is one warning line, with the traceback only at DEBUG (probes run
+  every few seconds, so tracebacks would flood the log during an outage).
+- Web: `lib/security-headers.mjs` sets nosniff, referrer and permissions policies everywhere;
+  `X-Frame-Options` and HSTS only in production, because VS Code's built-in browser shows the dev page
+  in a frame. The CSP is **report-only** because it could not be tested in a real browser here, and it
+  allows inline scripts because Next.js needs them without a nonce.
+- Verified: ruff and mypy clean; API 760 passed, 14 skipped (SQLite); web lint, `tsc`, 225 tests and
+  the production build pass. Headers confirmed with `curl` against a real `uvicorn`, `next start`
+  (production) and `next dev`. Deliberately breaking the middleware (no id sanitising, logging the
+  query string, leaking the exception text) made the new tests fail.
+- **Not** verified: the PostgreSQL suite, `alembic check`, Docker Compose, any browser (so the CSP
+  console output is unseen), a real database or Redis outage against `/health/ready`.
+- Open: look at the browser console, then enforce the CSP; then milestone B (audit log, atomic AI usage
+  limits, job cancellation).
+
 ## Open-source readiness (2026-11-24)
 
 - Added `LICENSE` (Apache-2.0) and `NOTICE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor

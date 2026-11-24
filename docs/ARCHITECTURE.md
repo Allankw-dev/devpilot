@@ -22,7 +22,7 @@ Redis, and the web app polls the job's status.
 |---|---|
 | `api/v1` | route handlers, thin: validate, authorize, call a service |
 | `api/deps.py` | authentication and organization-membership dependencies |
-| `core` | settings, roles, security helpers, day grouping |
+| `core` | settings, roles, security helpers, day grouping, request-id and security-header middleware, JSON logging |
 | `db` | SQLAlchemy models and session |
 | `services/github` | GitHub App client, sync, webhooks |
 | `services/indexing` | file filtering, secret scanning, chunking, embeddings, search |
@@ -44,6 +44,9 @@ already groups code by feature and every import and test depends on it.
 - Credential-looking text is withheld before anything reaches a model, and raw logs are not stored.
 - Background jobs are claimed atomically, safe to run twice, and end in a clear status.
 - A spent daily AI quota fails fast instead of retrying.
+- One middleware (`core/middleware.py`) gives every request an id, adds the security headers, writes the
+  access log and turns unexpected errors into a JSON 500 that names only the id. It sits inside CORS so
+  browsers can still read errors. Details: `docs/SECURITY.md` and `docs/OPERATIONS.md`.
 
 ## Web (`apps/web`)
 

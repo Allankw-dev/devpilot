@@ -1,4 +1,4 @@
-# DevPilot AI.
+# DevPilot AI
 
 Your AI engineering partner. Open-source AI developer productivity platform: index your repositories,
 ask questions about your code with checked citations, review pull requests and understand failed CI runs.
@@ -32,8 +32,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3001. The page shows API, database and Redis status./
-Health endpoint: http://localhost:8001/api/v1/health
+Open http://localhost:3001. The page shows API, database and Redis status.
+Health endpoints: http://localhost:8001/api/v1/health (detail), `/api/v1/health/live` (process is up) and
+`/api/v1/health/ready` (database and Redis answer); see [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 
 ## Auth
 

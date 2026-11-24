@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     index_exclude: Annotated[list[str], NoDecode] = []
 
     database_url: str = "postgresql+psycopg://devpilot:devpilot@localhost:5432/devpilot"
+    db_connect_timeout_seconds: int = 5  # so a database that is down fails fast, not after minutes
     redis_url: str = "redis://localhost:6379/0"
 
     # Supabase Auth. SUPABASE_URL is public. Newer projects sign tokens with asymmetric
@@ -179,6 +180,10 @@ class Settings(BaseSettings):
             )
             if blank(value)
         ]
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() in {"production", "prod"}
 
     @property
     def supabase_issuer(self) -> str | None:

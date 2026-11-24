@@ -21,3 +21,15 @@ def test_cors_origins_json_list(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_product_name_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PRODUCT_NAME", "Acme Pilot")
     assert Settings().product_name == "Acme Pilot"
+
+
+@pytest.mark.parametrize("value", ["production", "PRODUCTION", " prod ", "Production"])
+def test_production_environment_is_recognised(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("ENVIRONMENT", value)
+    assert Settings().is_production is True
+
+
+@pytest.mark.parametrize("value", ["development", "test", "staging", ""])
+def test_other_environments_are_not_production(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("ENVIRONMENT", value)
+    assert Settings().is_production is False

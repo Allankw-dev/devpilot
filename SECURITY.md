@@ -43,6 +43,8 @@ These rules are in `CLAUDE.md`, and each has automated tests:
 - The GitHub App is read-only. Nothing is posted to GitHub or re-run.
 - Repository code, diffs and CI logs are wrapped as untrusted text before they reach a model.
   Credential-looking lines and chunks are withheld from models and from the index.
+- The API sends security headers on every response, tags each request with an id, never logs query
+  strings or bodies, and hides its API docs in production.
 - Model answers are checked server-side (citations, file paths, quoted log lines) before they are
   stored or shown, and are rendered as plain text, never as HTML.
 
@@ -52,7 +54,8 @@ Be aware of these before you expose an instance to the internet. The current lis
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md); at the time of writing it includes:
 
 - No PostgreSQL row-level security (isolation is enforced in application code).
-- No audit log and no HTTP security headers set by the app yet.
+- No audit log. The web app's Content-Security-Policy is report-only (not enforced) and allows inline
+  scripts; details in [`docs/SECURITY.md`](docs/SECURITY.md).
 - Credentials: GitHub installation tokens are cached in memory only, and provider keys come from
   environment settings, so the database holds no tokens or keys today. There is no encrypted store for
   per-organization keys because no feature needs one yet.

@@ -25,7 +25,13 @@ _session_factory: sessionmaker[Session] | None = None
 def get_engine() -> Engine:
     global _engine, _session_factory
     if _engine is None:
-        _engine = create_engine(get_settings().database_url, pool_pre_ping=True)
+        settings = get_settings()
+        connect_args: dict[str, int] = {}
+        if settings.database_url.startswith("postgresql"):
+            connect_args["connect_timeout"] = settings.db_connect_timeout_seconds
+        _engine = create_engine(
+            settings.database_url, pool_pre_ping=True, connect_args=connect_args
+        )
         _session_factory = sessionmaker(bind=_engine, expire_on_commit=False)
     return _engine
 

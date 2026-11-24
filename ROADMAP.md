@@ -12,8 +12,10 @@ and roles. GitHub access is read-only.
 ## Now: project foundations
 
 - Open-source files and a self-hosting guide (done in this release).
-- Security basics: HTTP security headers, request IDs, separate liveness and readiness endpoints,
-  an audit log, atomic AI usage limits, cancelling running jobs.
+- Security basics, part 1 (done): HTTP security headers, request IDs, separate liveness and readiness
+  endpoints.
+- Security basics, part 2: an audit log, atomic AI usage limits, cancelling running jobs, enforcing the
+  web Content-Security-Policy once it has been checked in a browser.
 - PostgreSQL row-level security as a second layer behind the existing organization checks.
 - Dockerfiles for the API and web app, and a documented production deployment.
 
