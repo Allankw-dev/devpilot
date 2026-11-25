@@ -26,11 +26,15 @@ export function NewConversation({ orgId, repos, canAsk }: { orgId: string; repos
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   // If asking fails after the conversation was created, retry into the same one, not a new one.
   const created = useRef<string | null>(null);
+  const [locked, setLocked] = useState(false); // the repository can't change once it exists
 
   const start = useMutation({
     mutationFn: async (question: string) => {
       const token = await accessToken();
-      if (!created.current) created.current = (await conversationApi.create(token, orgId, repoId || undefined)).id;
+      if (!created.current) {
+        created.current = (await conversationApi.create(token, orgId, repoId || undefined)).id;
+        setLocked(true);
+      }
       await conversationApi.ask(token, orgId, created.current, question);
       return created.current;
     },
@@ -38,6 +42,7 @@ export function NewConversation({ orgId, repos, canAsk }: { orgId: string; repos
     onSuccess: async (id) => {
       await queryClient.invalidateQueries({ queryKey: ["org", orgId, "conversations"] });
       created.current = null;
+      setLocked(false);
       router.push(`/assistant?c=${id}`);
     },
   });
@@ -71,7 +76,7 @@ export function NewConversation({ orgId, repos, canAsk }: { orgId: string; repos
         <select
           id="assistant-repo"
           value={repoId}
-          disabled={!!created.current}
+          disabled={locked}
           onChange={(e) => setRepoId(e.target.value)}
           className="rounded-md border border-border bg-background px-2.5 py-1.5 text-sm"
         >

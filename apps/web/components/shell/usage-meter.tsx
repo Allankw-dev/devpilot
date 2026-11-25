@@ -27,7 +27,7 @@ export function UsageMeter({ orgId }: { orgId: string }) {
       </div>
       {limit ? (
         <div
-          className="mt-1 h-1.5 overflow-hidden rounded bg-muted"
+          className="mt-1 h-1.5 overflow-hidden rounded-sm bg-muted"
           role="progressbar"
           aria-label="AI calls in the last 24 hours against your daily limit"
           aria-valuemin={0}

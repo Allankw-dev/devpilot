@@ -4,7 +4,7 @@ A monorepo with two apps and shared infrastructure.
 
 ```
 apps/api   FastAPI service, Celery worker, Alembic migrations, tests
-apps/web   Next.js 15 (App Router) web app
+apps/web   Next.js 16 (App Router) web app
 docs/      guides per feature (this file is the map)
 docker-compose.yml   PostgreSQL (pgvector) and Redis for local development
 ```
@@ -22,7 +22,7 @@ Redis, and the web app polls the job's status.
 |---|---|
 | `api/v1` | route handlers, thin: validate, authorize, call a service |
 | `api/deps.py` | authentication and organization-membership dependencies |
-| `core` | settings, roles, security helpers, day grouping, request-id and security-header middleware, JSON logging |
+| `core` | settings, roles, security helpers, day grouping |
 | `db` | SQLAlchemy models and session |
 | `services/github` | GitHub App client, sync, webhooks |
 | `services/indexing` | file filtering, secret scanning, chunking, embeddings, search |
@@ -44,9 +44,6 @@ already groups code by feature and every import and test depends on it.
 - Credential-looking text is withheld before anything reaches a model, and raw logs are not stored.
 - Background jobs are claimed atomically, safe to run twice, and end in a clear status.
 - A spent daily AI quota fails fast instead of retrying.
-- One middleware (`core/middleware.py`) gives every request an id, adds the security headers, writes the
-  access log and turns unexpected errors into a JSON 500 that names only the id. It sits inside CORS so
-  browsers can still read errors. Details: `docs/SECURITY.md` and `docs/OPERATIONS.md`.
 
 ## Web (`apps/web`)
 
@@ -56,7 +53,8 @@ already groups code by feature and every import and test depends on it.
 - The selected workspace and sidebar state live in small Zustand stores, remembered in the browser.
   Server data goes through TanStack Query.
 - Design tokens are CSS variables in `app/globals.css` (dark by default, `.light` class for the
-  light theme) and are mapped to Tailwind colors in `tailwind.config.ts`.
+  light theme) and are mapped to Tailwind colors in the `@theme` block of the same file (Tailwind 4
+  has no JavaScript config). `proxy.ts` refreshes the sign-in session on every page request.
 - Fonts (Inter, JetBrains Mono) are self-hosted through Fontsource, so no request goes to Google.
 - Tests: Vitest and Testing Library in `apps/web/tests`.
 

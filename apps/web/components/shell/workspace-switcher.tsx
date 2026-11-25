@@ -59,7 +59,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-2 py-2 text-left text-sm hover:bg-muted"
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple text-xs font-semibold text-white">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-purple text-xs font-semibold text-white">
           {initial}
         </span>
         {!collapsed && (
@@ -78,7 +78,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
                 <button
                   type="button"
                   onClick={() => choose(o.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                 >
                   <span className="min-w-0 flex-1 truncate">{o.name}</span>
                   <span className="text-xs capitalize text-muted-foreground">{o.role}</span>
@@ -104,13 +104,13 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={80}
                 placeholder="Name"
-                className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm"
+                className="min-w-0 flex-1 rounded-sm border border-border bg-background px-2 py-1 text-sm"
               />
               <button
                 type="submit"
                 disabled={create.isPending || name.trim().length < 2}
                 className={cn(
-                  "rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground",
+                  "rounded-sm bg-primary px-2 py-1 text-xs font-medium text-primary-foreground",
                   "disabled:opacity-50",
                 )}
               >

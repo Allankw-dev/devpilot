@@ -23,7 +23,7 @@ function inline(text: string, linkFor: (n: number) => string | null, key: string
     const k = `${key}-${i}`;
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
       return (
-        <code key={k} className="rounded bg-muted px-1 py-0.5 text-[0.85em]">
+        <code key={k} className="rounded-sm bg-muted px-1 py-0.5 text-[0.85em]">
           {part.slice(1, -1)}
         </code>
       );

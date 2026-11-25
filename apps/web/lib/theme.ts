@@ -13,8 +13,23 @@ export function readTheme(): Theme {
   }
 }
 
+const listeners = new Set<() => void>();
+
+export function subscribeTheme(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** The theme the page is showing right now. The class on <html> is the source of truth. */
+export function currentTheme(): Theme {
+  return document.documentElement.classList.contains("light") ? "light" : "dark";
+}
+
 export function applyTheme(theme: Theme): void {
   document.documentElement.classList.toggle("light", theme === "light");
+  listeners.forEach((l) => l());
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

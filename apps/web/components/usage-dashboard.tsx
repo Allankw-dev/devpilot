@@ -7,6 +7,7 @@ import { aiApi, ApiError, type AiUsageDetail } from "@/lib/api";
 import { errorLabel, featureLabel } from "@/lib/ai-labels";
 import { ago } from "@/lib/format";
 import { accessToken } from "@/lib/supabase/token";
+import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
 
 const fmt = new Intl.NumberFormat();
@@ -58,9 +59,10 @@ export function UsageDashboard({ orgId }: { orgId: string }) {
     queryFn: async () => aiApi.usage(await accessToken(), orgId, days),
   });
   const data = usage.data;
+  const now = useNow();
 
   const quotaRecent = data?.quota_hit_at
-    ? Date.now() - new Date(data.quota_hit_at).getTime() < 24 * 3600 * 1000
+    ? now - new Date(data.quota_hit_at).getTime() < 24 * 3600 * 1000
     : false;
   const limit = data?.daily_limit ?? null;
   const used24 = data?.calls_last_24h ?? 0;
@@ -136,7 +138,7 @@ export function UsageDashboard({ orgId }: { orgId: string }) {
             </div>
             {limit ? (
               <div
-                className="mt-2 h-2 overflow-hidden rounded bg-muted"
+                className="mt-2 h-2 overflow-hidden rounded-sm bg-muted"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={limit}

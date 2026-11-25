@@ -3,17 +3,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { ApiError, workspaceApi } from "@/lib/api";
+import { ApiError, workspaceApi, type OrgWithRole } from "@/lib/api";
 import { ROLE_LABEL, isAdmin } from "@/lib/roles";
 import { accessToken } from "@/lib/supabase/token";
-import { applyTheme, readTheme, type Theme } from "@/lib/theme";
+import { applyTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
 
 const field = "rounded-md border border-border bg-background px-2.5 py-1.5 text-sm";
@@ -38,8 +39,7 @@ function ProfileCard() {
 }
 
 function AppearanceCard() {
-  const [theme, setTheme] = useState<Theme>("dark");
-  useEffect(() => setTheme(readTheme()), []);
+  const theme = useTheme();
   return (
     <Card>
       <CardHeader title="Appearance" description="Remembered in this browser." />
@@ -50,10 +50,7 @@ function AppearanceCard() {
             type="button"
             role="radio"
             aria-checked={theme === t}
-            onClick={() => {
-              applyTheme(t);
-              setTheme(t);
-            }}
+            onClick={() => applyTheme(t)}
             className={cn(
               "rounded-md border border-border px-4 py-2 text-sm capitalize",
               theme === t ? "bg-muted font-medium" : "hover:bg-muted",
@@ -69,16 +66,20 @@ function AppearanceCard() {
 
 function WorkspaceCard() {
   const { org } = useWorkspace();
+  if (!org) return null;
+  // Re-created when the saved name changes, so the box always starts from the saved name.
+  return <WorkspaceForm key={`${org.id}:${org.name}`} org={org} />;
+}
+
+function WorkspaceForm({ org }: { org: OrgWithRole }) {
   const queryClient = useQueryClient();
-  const admin = isAdmin(org?.role);
-  const [name, setName] = useState(org?.name ?? "");
-  useEffect(() => setName(org?.name ?? ""), [org?.name]);
+  const admin = isAdmin(org.role);
+  const [name, setName] = useState(org.name);
 
   const rename = useMutation({
-    mutationFn: async () => workspaceApi.rename(await accessToken(), org!.id, name.trim()),
+    mutationFn: async () => workspaceApi.rename(await accessToken(), org.id, name.trim()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
   });
-  if (!org) return null;
 
   const changed = name.trim() !== org.name && name.trim().length >= 2;
   return (

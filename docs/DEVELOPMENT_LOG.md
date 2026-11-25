@@ -3,47 +3,32 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
-## Security foundations, milestone A (2026-11-24)
+## Web stack upgrade: Next 16, Tailwind 4, ESLint 9 (2026-11-22)
 
-- API: new `core/middleware.py` (pure ASGI, so streaming still works) gives each request an id,
-  adds security headers, writes one access-log line and turns unexpected errors into a JSON 500 that
-  names only the request id. `core/logging.py` now adds `request_id` and the access fields to the JSON
-  log. New `/health/live` and `/health/ready`; `/health` unchanged for the web status panel.
-- Decisions: the middleware sits inside CORS so error responses still carry CORS headers; a caller's
-  `X-Request-ID` is kept only if it is 8 to 64 characters of `A-Za-z0-9._-`; the access log never holds
-  the query string, headers, body or client IP; API docs are off and HSTS is on when
-  `ENVIRONMENT=production`; CORS methods and headers narrowed to what `lib/api.ts` sends; DB connect
-  timeout 5 s; a failed health probe is one warning line, with the traceback only at DEBUG (probes run
-  every few seconds, so tracebacks would flood the log during an outage).
-- Web: `lib/security-headers.mjs` sets nosniff, referrer and permissions policies everywhere;
-  `X-Frame-Options` and HSTS only in production, because VS Code's built-in browser shows the dev page
-  in a frame. The CSP is **report-only** because it could not be tested in a real browser here, and it
-  allows inline scripts because Next.js needs them without a nonce.
-- Verified: ruff and mypy clean; API 760 passed, 14 skipped (SQLite); web lint, `tsc`, 225 tests and
-  the production build pass. Headers confirmed with `curl` against a real `uvicorn`, `next start`
-  (production) and `next dev`. Deliberately breaking the middleware (no id sanitising, logging the
-  query string, leaking the exception text) made the new tests fail.
-- **Not** verified: the PostgreSQL suite, `alembic check`, Docker Compose, any browser (so the CSP
-  console output is unseen), a real database or Redis outage against `/health/ready`.
-- Open: look at the browser console, then enforce the CSP; then milestone B (audit log, atomic AI usage
-  limits, job cancellation).
-
-## Open-source readiness (2026-11-24)
-
-- Added `LICENSE` (Apache-2.0) and `NOTICE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor
-  Covenant 2.1), `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `ROADMAP.md`, issue forms, a pull
-  request template and Dependabot (npm and GitHub Actions). New guide: `docs/SELF_HOSTING.md`.
-- Found by reading the repo against the full project brief, and fixed: the README and `.env.example`
-  said PostgreSQL is on host port 5433 while `docker-compose.yml` uses 15433; a stray `/` and a
-  trailing period in the README; the empty "echo Hello" `.vscode/tasks.json` template was removed.
-- Found and recorded, not changed: `npm audit` now reports 2 findings, not 13 (see Known issues in
-  `IMPLEMENTATION_STATUS.md`); a stored-credentials gap suspected during the review does not exist, because
-  the app keeps no tokens or keys in the database (GitHub installation tokens are cached in memory).
-- Verified on a fresh clone: ruff and mypy clean; API 719 passed, 14 skipped (SQLite); web lint,
-  `tsc`, 217 tests and the production build pass. **Not** run: the PostgreSQL suite, `alembic check`,
-  Docker Compose, anything in a browser. This change is documentation and templates only.
-- Open: switch on private vulnerability reporting and Discussions in the repository settings; then the
-  security basics listed under "Now" in `ROADMAP.md`.
+- **Why:** `npm audit` reported 13 production vulnerabilities (12 high), all from Next 15 and the
+  Tailwind 3 toolchain. It now reports **0** (production and dev).
+- **What changed:** Next 15.5 to 16.4.6 (`middleware.ts` became `proxy.ts`); Tailwind 3.4 to 4.3
+  using Tailwind's own upgrade tool (the JavaScript config became an `@theme` block in
+  `app/globals.css`; `autoprefixer` and the unused `tailwindcss-animate` were removed;
+  `tailwind-merge` 2 to 3); ESLint 8 to 9 with a flat config (`next lint` no longer exists).
+  npm warns that ESLint 9 "is no longer supported"; ESLint 10 exists but the plugins inside
+  `eslint-config-next` 16.4 don't declare support for it yet (npm reports invalid peers), so 9.x stays
+  until they do.
+- **Lint findings fixed instead of switched off:** the newer React rules flagged state set inside
+  effects, `Date.now()` and a ref read while rendering. The theme is now an external store
+  (`useTheme`), "now" comes from `useNow`, the mobile drawer closes by comparing the page it was
+  opened on, filters reset the page in the same handler, and the GitHub callback works out what the
+  link says while rendering. Behavior and tests are unchanged.
+- **Look:** the upgrade tool renamed a few utilities to keep the same size (`rounded` to
+  `rounded-sm`, `break-words` to `wrap-break-word`). Borders with no color now use the theme's
+  border color instead of a light gray.
+- **Verified:** ESLint, `tsc`, 217 web tests and the production build pass; `next start` serves
+  `/login` with its stylesheet, and signed-out requests to `/dashboard` redirect to `/login`; the
+  generated CSS contains the theme colors and the utilities the app uses. **Not** verified: how it
+  looks in a real browser or on a phone, so look through every page once.
+- **Your Copilot work:** the AI provider fallback (Groq/OpenRouter via an OpenAI-compatible
+  provider, used when the main provider's quota is spent) is on `main` (it was committed together
+  with the CI fix). Synced into the build sandbox; with it the API suite passes (719 on SQLite).
 
 ## Fixes after first real use (2026-11-22)
 

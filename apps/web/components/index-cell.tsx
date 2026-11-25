@@ -2,6 +2,7 @@
 
 import type { Repo } from "@/lib/api";
 import { ago } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
 
 const WAITING_FOR_WORKER_MS = 90_000;
@@ -18,11 +19,12 @@ export function IndexCell({
   onStart: () => void;
 }) {
   const { index } = repo;
+  const now = useNow();
   const active = index.status === "queued" || index.status === "running";
   const waitingTooLong =
     index.status === "queued" &&
     index.queued_at !== null &&
-    Date.now() - new Date(index.queued_at).getTime() > WAITING_FOR_WORKER_MS;
+    now - new Date(index.queued_at).getTime() > WAITING_FOR_WORKER_MS;
 
   const label = {
     none: "Not indexed",

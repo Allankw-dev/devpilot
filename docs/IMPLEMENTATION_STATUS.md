@@ -1,7 +1,7 @@
 # Implementation status
 
 Checked against the project brief ("Master Development Instruction"). A box is ticked only when
-the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)** the open-source readiness step and security foundations milestone A (2026-11-24).
+the feature works and has automated tests. Last updated for **Phase 10, milestone F (navigation finished)**.
 
 Numbering note: the brief has its own eight phases. This repo's early commits used a different
 numbering (Phases 1 to 7). To avoid confusion this file uses the brief's names, and the
@@ -11,15 +11,15 @@ development log maps one to the other.
 
 | Suite | Result |
 |---|---|
-| API on SQLite | 760 passed, 14 skipped (the skipped ones need PostgreSQL); re-run 2026-11-24 |
-| API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped (earlier run, not repeated on 2026-11-24) |
-| Web (Vitest) | 225 passed (re-run 2026-11-24) |
-| Lint, types, build | ruff, mypy, ESLint, `tsc` and the production build clean (re-run 2026-11-24) |
+| API on SQLite | 719 passed, 14 skipped (the skipped ones need PostgreSQL) |
+| API on PostgreSQL 16 + pgvector | 723 passed, 2 skipped (before the provider fallback work; not re-run since) |
+| Web (Vitest) | 217 passed |
+| Lint and types | ruff, mypy, ESLint and `tsc` clean |
 | End-to-end (Playwright) | **not set up** |
 | Load tests | **not run** |
 
-The new web shell has been opened in a browser (2026-11-22) but **not on a phone-sized screen**, and there
-are no end-to-end tests. Check the layout by eye before relying on it.
+The new web shell was built and unit-tested but has **not yet been checked in a real browser**
+(including on a phone-sized screen). Check it by eye before relying on the layout.
 
 ## Brief phase 1: foundation and UI: partly done
 
@@ -45,6 +45,8 @@ are no end-to-end tests. Check the layout by eye before relying on it.
 - [ ] Invitations: you can only add people who have already signed in once
 - [ ] PostgreSQL row-level security (tenant isolation is enforced in code and tested)
 - [ ] Docker images for the API and web app
+- [x] AI provider fallback (Copilot-written, merged on main): Groq/OpenRouter through an OpenAI-compatible
+      provider, used when the main provider's quota is spent
 
 ## Brief phase 2: GitHub integration: mostly done (read-only)
 
@@ -100,47 +102,15 @@ Test generation, sandboxed execution and coverage are all still to do.
 ## Brief phase 8: production hardening: not started
 
 - [x] CI workflow runs lint, types, tests and build for both apps
-- [x] Liveness and readiness endpoints (`/health/live`, `/health/ready`)
-- [ ] Sentry, OpenTelemetry, production Dockerfiles
+- [ ] Sentry, OpenTelemetry, health checks beyond `/health`, production Dockerfiles
 - [ ] Load testing, security review, backup and recovery documentation
 - [ ] Final production-readiness assessment
 
-## Security and operations foundations (brief sections 6 and 15): started
-
-Milestone A, with tests:
-
-- [x] API: security headers, request ids, access log without query strings, JSON 500 without details,
-      CORS limited to the methods and headers the web app uses, API docs off in production, HSTS in production
-- [x] Web: nosniff, referrer and permissions policies; framing protection and HSTS in production
-- [x] Database connection timeout
-- [ ] Web Content-Security-Policy **enforced** (it is report-only; needs a look at the browser console first)
-- [ ] Checked in a real browser: the CSP console output and the production-mode headers on a deployed site
-- [ ] Audit log, atomic AI usage limits, cancelling running jobs (milestone B)
-- [ ] PostgreSQL row-level security, statement timeouts, rate limits beyond the AI features (later)
-- [ ] Metrics, tracing, queue-depth and worker health, Sentry, dependency scanning in CI
-
-## Open source and community: partly done
-
-- [x] Apache-2.0 `LICENSE` and `NOTICE`
-- [x] `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `ROADMAP.md`
-- [x] Issue forms, pull request template, Dependabot for npm and GitHub Actions
-- [x] `docs/SELF_HOSTING.md` (development setup only; the steps were not run end to end on a clean machine)
-- [ ] Switch on **private vulnerability reporting** and **Discussions** in the GitHub repository
-      settings (`SECURITY.md` and the issue chooser link to them; this cannot be done from the code)
-- [ ] Docs the brief names that don't exist yet: `DATABASE.md`, a threat model in `docs/SECURITY.md`,
-      `SCALABILITY.md`, `OPERATIONS.md`, `AI_SYSTEM.md`
-- [ ] Dependabot for the Python dependencies (they are pinned in `requirements.lock`, which it doesn't read)
-- [ ] Plugin SDK, plugin examples, good-first-issue labels, public discussions
-
 ## Known issues
 
-- **Dependency vulnerabilities.** `npm audit --omit=dev` (re-run 2026-11-24 on a fresh install)
-  reports 2 production findings in `apps/web` (1 moderate, 1 high), both from a PostCSS copy bundled
-  inside Next 15. The advisories concern PostCSS stringifying CSS and reading source maps; the app's
-  CSS is its own, so exploitability looks low, but it should still be fixed. The fix is Next 16.4.6,
-  a breaking upgrade that also needs the middleware-to-proxy migration and Tailwind 4. An earlier
-  count of 13 also listed the Tailwind toolchain (`picomatch`); that no longer appears. Plan the
-  upgrade in the hardening phase.
+- **Dependency vulnerabilities: resolved.** `npm audit` reported 13 production findings (25 in all)
+  on Next 15 and the Tailwind 3 toolchain. After moving to Next 16.4.6 and Tailwind 4.3 it reports
+  0. Re-run it regularly: `cd apps/web; npm audit`.
 - **Dashboard weight.** `/dashboard` loads about 331 kB of JavaScript because of the chart library.
 - **Free-tier AI quota.** A free Gemini key allows about 20 requests a day per model; see `docs/USAGE.md`.
 - **Nav.** The sidebar lists only pages that work. Features are added to `lib/nav.ts` when they exist.

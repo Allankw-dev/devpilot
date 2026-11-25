@@ -34,16 +34,19 @@ web pins in `apps/web/package-lock.json`. Bump deliberately, then re-run CI.
 ## Web (apps/web)
 | Package | Version |
 |---|---|
-| next | 15.5.x |
+| next | 16.4.x |
 | react / react-dom | 19.x |
-| tailwindcss | 3.4.x |
+| tailwindcss / @tailwindcss/postcss | 4.3.x |
+| tailwind-merge | 3.x |
 | typescript | 5.9.x |
 | @tanstack/react-query | 5.x |
 | zustand | 5.x |
 | @supabase/supabase-js / @supabase/ssr | 2.119.0 / 0.12.7 |
-| eslint | 8.57 |
+| eslint / eslint-config-next | 9.x / 16.4.x |
 
-Tailwind is on v3 because shadcn/ui's config and plugins are most stable there.
+Tailwind 4 is configured in CSS (the `@theme` block in `app/globals.css`), and `tailwind-merge` 3 matches
+it. Next 16 renamed `middleware.ts` to `proxy.ts` and dropped `next lint`, so `npm run lint` runs
+`eslint .` with the flat config in `eslint.config.mjs`. Node 20.9 or newer is required.
 Celery runs the worker; pgvector stores the 768-dimension code embeddings (HNSW, cosine).
 
 Model names are never pinned in code (see `docs/AI.md`). `google-genai` and `anthropic` pull in

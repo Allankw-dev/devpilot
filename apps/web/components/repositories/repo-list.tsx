@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-provider";
@@ -24,8 +24,12 @@ const field = "rounded-md border border-border bg-background px-2.5 py-1.5 text-
 export function RepoList() {
   const { org } = useWorkspace();
   const orgId = org?.id ?? "";
-  const [filters, setFilters] = useState<RepoFilters>(NO_FILTERS);
+  const [filters, setFiltersState] = useState<RepoFilters>(NO_FILTERS);
   const [page, setPage] = useState(1);
+  const setFilters = (next: RepoFilters) => {
+    setFiltersState(next);
+    setPage(1); // a new search starts at the first page
+  };
 
   const repos = useQuery({
     queryKey: ["org", orgId, "repos"],
@@ -34,8 +38,6 @@ export function RepoList() {
     refetchInterval: (q) =>
       q.state.data?.some((r) => r.index.status === "queued" || r.index.status === "running") ? 3000 : false,
   });
-
-  useEffect(() => setPage(1), [filters]); // a new search starts at the first page
 
   const all = useMemo(() => repos.data ?? [], [repos.data]);
   const languages = useMemo(() => languagesOf(all), [all]);

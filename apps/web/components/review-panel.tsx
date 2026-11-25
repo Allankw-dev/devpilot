@@ -22,7 +22,7 @@ const NO_LINKS = () => null;
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   return (
-    <span className={cn("rounded border px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase", SEVERITY_STYLE[severity])}>
+    <span className={cn("rounded-sm border px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase", SEVERITY_STYLE[severity])}>
       {severity}
     </span>
   );

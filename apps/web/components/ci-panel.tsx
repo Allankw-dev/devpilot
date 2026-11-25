@@ -55,7 +55,7 @@ export function CiPanel({ orgId, run }: { orgId: string; run: CiRunRow }) {
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="rounded border border-border px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase">
+        <span className="rounded-sm border border-border px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase">
           {data.category ? CATEGORY_LABEL[data.category] : "Unclear"}
         </span>
         <span className="text-muted-foreground">
@@ -113,7 +113,7 @@ export function CiPanel({ orgId, run }: { orgId: string; run: CiRunRow }) {
             {data.evidence.map((e, i) => (
               <li key={`${e.job}-${i}`}>
                 <p className="text-xs text-muted-foreground">{e.job}</p>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted px-3 py-2 text-xs">
+                <pre className="overflow-x-auto whitespace-pre-wrap wrap-break-word rounded-md border border-border bg-muted px-3 py-2 text-xs">
                   {e.quote}
                 </pre>
               </li>

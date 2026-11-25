@@ -53,7 +53,7 @@ export function Composer({
             send();
           }
         }}
-        className="min-h-[3rem] flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
+        className="min-h-12 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
       />
       <Button type="submit" variant="primary" disabled={!canSend}>
         {pending ? "Thinking…" : "Ask"}

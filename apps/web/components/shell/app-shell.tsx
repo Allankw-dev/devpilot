@@ -17,12 +17,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { org } = useWorkspace();
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleCollapsed = useUiStore((s) => s.toggleSidebar);
-  const [drawer, setDrawer] = useState(false);
-
-  useEffect(() => setDrawer(false), [pathname]); // close the drawer after navigating
+  // Remember where the drawer was opened: moving to another page closes it by itself.
+  const [drawerPath, setDrawerPath] = useState<string | null>(null);
+  const drawer = drawerPath === pathname;
+  const setDrawer = (open: boolean) => setDrawerPath(open ? pathname : null);
   useEffect(() => {
     if (!drawer) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawer(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerPath(null);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [drawer]);
@@ -32,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-sm focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
       >
         Skip to content
       </a>
@@ -68,12 +69,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className={cn("transition-[padding]", collapsed ? "lg:pl-16" : "lg:pl-64")}>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setDrawer(true)}
             aria-label="Open navigation"
-            className="rounded p-1.5 hover:bg-muted lg:hidden"
+            className="rounded-sm p-1.5 hover:bg-muted lg:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden />
           </button>

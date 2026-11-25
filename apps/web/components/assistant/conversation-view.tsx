@@ -96,7 +96,7 @@ export function ConversationView({
   const error = ask.isError ? ask.error : regenerate.isError ? regenerate.error : null;
 
   return (
-    <div className="flex min-h-[28rem] flex-col">
+    <div className="flex min-h-112 flex-col">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{detail.data.title}</h2>

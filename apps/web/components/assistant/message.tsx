@@ -13,7 +13,7 @@ const CONFIDENCE_STYLE = { high: "text-success", medium: "text-muted-foreground"
 export function UserMessage({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
-      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-lg bg-elevated px-4 py-2 text-sm">{text}</p>
+      <p className="max-w-[85%] whitespace-pre-wrap wrap-break-word rounded-lg bg-elevated px-4 py-2 text-sm">{text}</p>
     </div>
   );
 }

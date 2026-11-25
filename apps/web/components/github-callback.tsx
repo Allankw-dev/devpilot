@@ -14,43 +14,38 @@ export function GithubCallback() {
   const params = useSearchParams();
   const router = useRouter();
   const started = useRef(false); // the code is single-use: never submit it twice
-  const [message, setMessage] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const code = params.get("code");
+  const state = params.get("state");
+  const installationId = Number(params.get("installation_id"));
+  const isRequest = params.get("setup_action") === "request";
+  const invalid = !isRequest && (!code || !Number.isInteger(installationId) || installationId <= 0);
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current || isRequest || invalid) return;
     started.current = true;
-
-    const code = params.get("code");
-    const installationId = Number(params.get("installation_id"));
-
-    if (params.get("setup_action") === "request") {
-      setMessage(
-        "Your request was sent to the GitHub organization’s owners. Once they approve it, connect again from the Integrations page.",
-      );
-      return;
-    }
-    if (!code || !Number.isInteger(installationId) || installationId <= 0) {
-      setFailed(true);
-      setMessage("This link is missing information from GitHub. Start again from the Integrations page.");
-      return;
-    }
-
     (async () => {
       try {
         const installation = await orgApi.claim(await accessToken(), {
-          code,
+          code: code as string,
           installation_id: installationId,
-          state: params.get("state"),
+          state,
         });
         useWorkspaceStore.getState().select(installation.org_id); // show the workspace you just connected
         router.replace("/integrations");
       } catch (e) {
-        setFailed(true);
-        setMessage(e instanceof Error ? e.message : "Could not finish connecting GitHub.");
+        setError(e instanceof Error ? e.message : "Could not finish connecting GitHub.");
       }
     })();
-  }, [params, router]);
+  }, [code, state, installationId, isRequest, invalid, router]);
+
+  const message = isRequest
+    ? "Your request was sent to the GitHub organization’s owners. Once they approve it, connect again from the Integrations page."
+    : invalid
+      ? "This link is missing information from GitHub. Start again from the Integrations page."
+      : error;
+  const failed = !isRequest && message !== null;
 
   return (
     <main className="mx-auto max-w-md px-6 py-16">

@@ -52,7 +52,7 @@ export function Sidebar({
             type="button"
             onClick={onClose}
             aria-label="Close navigation"
-            className="rounded p-1 hover:bg-muted"
+            className="rounded-sm p-1 hover:bg-muted"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
@@ -121,7 +121,7 @@ export function Sidebar({
             onClick={signOut}
             aria-label="Sign out"
             title="Sign out"
-            className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="rounded-sm p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" aria-hidden />
           </button>
