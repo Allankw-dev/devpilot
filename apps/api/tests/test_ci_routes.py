@@ -25,6 +25,7 @@ from tests.ci_helpers import (
 )
 from tests.conftest import Person, World
 from tests.github_helpers import FakeGitHub, make_job
+from tests.test_audit_log import entries as audit_entries
 
 API = "/api/v1"
 PersonFactory = Callable[[str], Person]
@@ -385,3 +386,14 @@ def test_one_run_comes_with_its_analysis_summary(env: CiEnv, person: PersonFacto
     other = env.client.post(f"{API}/orgs", json={"name": "Evil"}, headers=mallory.headers).json()
     cross = f"{API}/orgs/{other['id']}/ci-runs/{env.runs[FAILED_RUN]}"
     assert env.client.get(cross, headers=mallory.headers).status_code == 404
+
+
+def test_requesting_an_analysis_is_audited(env: CiEnv) -> None:
+    env.script(analysis_json())
+    assert start(env).status_code == 202
+    [entry] = [
+        e
+        for e in audit_entries(env.client, env.world.owner, env.world.org_id)
+        if e["action"] == "ci_analysis.requested"
+    ]
+    assert entry["target_type"] == "workflow_run" and entry["details"] == {"force": False}

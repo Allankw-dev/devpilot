@@ -68,6 +68,15 @@ To check it: open the app in a browser, open the console, click through every pa
 connect, Assistant, Reviews, CI), and look for report-only messages. A clean console means the policy
 can be switched on by renaming the header in `securityHeaders()` to `Content-Security-Policy`.
 
+## Audit log and usage limits
+
+- **Audit log.** Member, team, GitHub-connection and AI-work actions are recorded with who did them,
+  in the same database transaction as the action. Admins read it on the Team page. Events, guarantees
+  and limits: [`AUDIT.md`](AUDIT.md).
+- **Usage limits.** Per-person per-minute limits on Ask, reviews and CI analyses, plus an optional
+  per-workspace daily cap, are taken *before* any AI call with one atomic database statement, so
+  concurrent requests can't get past them. Details: [`USAGE.md`](USAGE.md).
+
 ## How to check the headers yourself
 
 With the API running on port 8001 (`curl.exe` is built into Windows):
@@ -84,12 +93,15 @@ echoed back; the third shows the web app's headers (no `X-Frame-Options` in deve
 ## Known limitations
 
 - The web CSP is report-only and allows inline scripts (above).
-- There are no rate limits outside the AI features, and DevPilot does not limit sign-in attempts
-  (sign-in happens at Supabase).
+- There are no rate limits outside the AI features (and indexing isn't limited), and DevPilot does
+  not limit sign-in attempts (sign-in happens at Supabase).
+- The AI usage limits use fixed windows (up to twice the limit across a boundary), and the workspace
+  cap counts requests, not model calls.
 - Organization isolation is enforced in application code only; there is no PostgreSQL row-level security.
-- There is no audit log yet.
+- The audit log is not tamper-proof (someone with database access can change it), has no retention
+  setting and no export, and records job requests when accepted, not when they finish.
 - Only a connection timeout exists on the database; there is no statement timeout.
 - Uvicorn's own start-up and error lines are not JSON (the app's lines are).
 - Dependency scanning does not run in CI yet; Dependabot covers npm and GitHub Actions only.
-- Two `npm audit` findings remain in the PostCSS copy bundled with Next 15
-  (see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md)).
+- `npm audit` currently reports no findings for the web app (Next 16, Tailwind 4); re-run it
+  regularly, since new advisories appear all the time.

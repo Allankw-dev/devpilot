@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -20,12 +19,14 @@ from app.schemas import (
     CiFailedStepOut,
     CiRunOut,
 )
+from app.services.audit import record_audit
 from app.services.ci.pipeline import (
     ANALYZABLE_CONCLUSIONS,
     abort_analysis,
     is_analyzable,
     request_analysis,
 )
+from app.services.limits import enforce_org_daily, enforce_user_rate
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ci"])
@@ -86,24 +87,6 @@ def _analysis_out(analysis: CiAnalysis, run: WorkflowRun) -> CiAnalysisOut:
         error=analysis.error,
         stale=_stale(analysis, run),
     )
-
-
-def _check_rate(db: Session, user_id: uuid.UUID, per_minute: int) -> None:
-    """Analyses cost tokens. Counts analyses this person asked for, so even a burst of requests
-    made before any finishes is limited."""
-    recent = db.scalar(
-        select(func.count())
-        .select_from(CiAnalysis)
-        .where(
-            CiAnalysis.requested_by == user_id,
-            CiAnalysis.queued_at >= datetime.now(UTC) - timedelta(seconds=60),
-        )
-    )
-    if (recent or 0) >= per_minute:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "You're requesting a lot of analyses. Wait a minute and try again.",
-        )
 
 
 # ---------- routes ----------
@@ -231,7 +214,8 @@ def start_analysis(
         if at_least(ctx.role, Role.admin):
             detail = "Missing settings: " + ", ".join(missing)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail)
-    _check_rate(db, ctx.user.id, settings.ci_rate_limit_per_minute)
+    enforce_user_rate(db, ctx.user.id, "ci", settings.ci_rate_limit_per_minute, what="analyses")
+    enforce_org_daily(db, settings, ctx.org.id)
 
     request = request_analysis(db, run, ctx.user.id, force=bool(body and body.force))
     analysis = request.analysis
@@ -250,5 +234,15 @@ def start_analysis(
     except JobQueueUnavailable as exc:
         abort_analysis(db, analysis.id, analysis.run_id, str(exc))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="ci_analysis.requested",
+        target_type="workflow_run",
+        target_id=run.id,
+        details={"force": bool(body and body.force)},
+    )
+    db.commit()
     response.status_code = status.HTTP_202_ACCEPTED
     return queued

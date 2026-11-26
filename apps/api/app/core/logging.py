@@ -20,6 +20,9 @@ class JsonFormatter(logging.Formatter):
         http = getattr(record, "http", None)
         if isinstance(http, dict):
             payload["http"] = http
+        audit = getattr(record, "audit", None)
+        if isinstance(audit, dict):
+            payload["audit"] = audit
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str)

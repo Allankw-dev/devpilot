@@ -19,6 +19,7 @@ from app.services.llm.errors import (
 from app.services.llm.usage import DbUsageRecorder
 from tests.conftest import Person, World
 from tests.llm_helpers import FakeProvider, reply
+from tests.test_audit_log import entries as audit_entries
 
 API = "/api/v1"
 PersonFactory = Callable[[str], Person]
@@ -196,3 +197,15 @@ def test_only_admins_can_run_the_connection_test(
     fake_llm.script = [reply("OK")]
     res = client.post(f"{API}/orgs/{world.org_id}/ai/test", headers=member.headers)
     assert res.status_code == 403 and fake_llm.requests == []  # model was never called
+
+
+def test_the_connection_test_is_audited_even_when_it_fails(
+    client: TestClient, world: World, configured: None, fake_llm: FakeProvider
+) -> None:
+    fake_llm.script = [LLMAuthError("bad key")]
+    assert (
+        client.post(f"{API}/orgs/{world.org_id}/ai/test", headers=world.owner.headers).status_code
+        == 502
+    )
+    log = audit_entries(client, world.owner, world.org_id)
+    assert [e["action"] for e in log][0] == "ai.connection_tested"  # newest first

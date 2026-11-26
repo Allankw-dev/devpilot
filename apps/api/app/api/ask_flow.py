@@ -7,12 +7,12 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.llm_http import llm_http_error
-from app.api.ratelimit import check_rate_limit
 from app.api.v1.indexing import _repo_in_org
 from app.core.config import Settings
 from app.db.models import EMBEDDING_COLUMN_DIMENSIONS
 from app.schemas import AskCitation, AskOut
 from app.services.indexing.retrieval import Retriever, file_list, search_hits
+from app.services.limits import enforce_org_daily, enforce_user_rate
 from app.services.llm import CallContext, LLMError, LLMService
 from app.services.qa.answer import answer_question
 
@@ -44,7 +44,8 @@ def run_ask(
         )
     if repository_id is not None:
         _repo_in_org(db, org_id, repository_id)
-    check_rate_limit(db, user_id, FEATURE, settings.ask_rate_limit_per_minute, what="questions")
+    enforce_user_rate(db, user_id, "ask", settings.ask_rate_limit_per_minute, what="questions")
+    enforce_org_daily(db, settings, org_id)
 
     try:
         embedded = llm.embed(

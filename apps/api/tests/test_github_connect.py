@@ -16,6 +16,7 @@ from tests.github_helpers import (
     make_repo,
     start_connect,
 )
+from tests.test_audit_log import entries as audit_entries
 
 API = "/api/v1"
 PersonFactory = Callable[[str], Person]
@@ -330,3 +331,22 @@ def test_new_repo_added_on_github_appears_after_sync(
     )
     repos = client.get(f"{API}/orgs/{world.org_id}/repos", headers=world.owner.headers).json()
     assert len(repos) == 3
+
+
+def test_connecting_and_disconnecting_github_are_audited(
+    client: TestClient, world: World, fake_github: FakeGitHub
+) -> None:
+    connect(client, fake_github, world.owner.headers, world.org_id)
+    pk = status_of(client, world)["installations"][0]["id"]
+    url = f"{API}/orgs/{world.org_id}/github/installations/{pk}"
+    assert client.delete(url, headers=world.owner.headers).status_code == 204
+
+    log = audit_entries(client, world.owner, world.org_id)
+    assert [e["action"] for e in reversed(log)] == [
+        "org.created",
+        "github.installation_connected",
+        "github.installation_disconnected",
+    ]
+    connected = log[1]
+    assert connected["target_type"] == "github_installation" and connected["details"]["account"]
+    assert connected["actor_email"] == world.owner.email

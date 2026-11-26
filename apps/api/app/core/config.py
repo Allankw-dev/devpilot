@@ -68,6 +68,8 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0  # per provider call
     llm_max_attempts: int = 3  # calls per operation, retries included
     ai_daily_request_limit: int = 0  # provider's daily request limit, shown on the usage page
+    # Cap on Ask, review and CI-analysis requests per organization per UTC day. 0 = no cap.
+    ai_org_daily_request_limit: int = 0
     llm_max_output_tokens: int = 4096
     embedding_dimensions: int = 768  # must match the pgvector column added with indexing
 

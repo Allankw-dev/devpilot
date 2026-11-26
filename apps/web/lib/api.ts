@@ -650,6 +650,31 @@ export const workspaceApi = {
   remove: (token: string, orgId: string) => authed<void>(`/orgs/${orgId}`, token, { method: "DELETE" }),
 };
 
+// ---------- audit log (admins and owners only) ----------
+
+export interface AuditEntry {
+  id: string;
+  action: string; // e.g. "member.role_changed"
+  actor_id: string | null;
+  actor_email: string | null;
+  actor_name: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  request_id: string | null;
+  created_at: string;
+}
+
+export interface AuditPage {
+  items: AuditEntry[];
+  next_before: string | null;
+}
+
+export const auditApi = {
+  list: (token: string, orgId: string, before?: string) =>
+    authed<AuditPage>(`/orgs/${orgId}/audit-log${before ? `?before=${encodeURIComponent(before)}` : ""}`, token),
+};
+
 
 // ---------- assistant conversations ----------
 

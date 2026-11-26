@@ -17,6 +17,7 @@ from app.services.llm.errors import LLMAuthError, LLMRateLimited
 from tests.conftest import Person, World
 from tests.github_helpers import FakeGitHub
 from tests.review_helpers import ReviewEnv, finding, make_review_env, review_json
+from tests.test_audit_log import entries as audit_entries
 
 API = "/api/v1"
 PersonFactory = Callable[[str], Person]
@@ -369,3 +370,52 @@ def test_the_review_task_asks_for_a_delayed_retry_on_a_rate_limit(
         set_resources(None)
     assert asked == [tasks.retry_delay(0)]
     assert env.review().status == "queued"  # waiting for the retry, not failed
+
+
+def test_requesting_a_review_and_dismissing_a_finding_are_audited(env: ReviewEnv) -> None:
+    env.script(review_json([finding(severity="critical")]))
+    assert start(env).status_code == 202
+    assert (
+        start(env).status_code == 200
+    )  # nothing changed, so it was answered from the stored review
+    patch(env, finding_id(env), status="dismissed")
+
+    log = audit_entries(env.client, env.world.owner, env.world.org_id)
+    requested = [e for e in log if e["action"] == "review.requested"]
+    assert len(requested) == 1  # the cached answer cost nothing and is not recorded
+    assert requested[0]["target_type"] == "pull_request"
+    assert requested[0]["details"] == {"number": 1, "force": False}
+    updated = next(e for e in log if e["action"] == "review.finding_updated")
+    assert (
+        updated["details"] == {"status": "dismissed"} and updated["target_type"] == "review_finding"
+    )
+
+
+def test_a_refused_review_is_not_audited(env: ReviewEnv, person: PersonFactory) -> None:
+    viewer = add_member(env, person, "viewer")
+    assert start(env, viewer).status_code == 403
+    log = audit_entries(env.client, env.world.owner, env.world.org_id)
+    assert [e for e in log if e["action"] == "review.requested"] == []
+
+
+def test_an_organization_can_be_capped_per_day(
+    client: TestClient,
+    world: World,
+    fake_github: FakeGitHub,
+    gh_client: GitHubClient,
+    session_factory: sessionmaker[Session],
+    gh_settings: Settings,
+    person: PersonFactory,
+) -> None:
+    env = make_review_env(
+        client, world, fake_github, gh_client, session_factory, gh_settings,
+        review_rate_limit_per_minute=100, ai_org_daily_request_limit=2,
+    )  # fmt: skip
+    env.set_pr(2, files=[])
+    env.script(review_json(), review_json(), review_json())
+    assert start(env, number=1).status_code == 202
+    assert start(env, number=2).status_code == 202
+    third = start(env, number=1, force=True)
+    assert third.status_code == 429 and "organization" in third.json()["detail"]
+    teammate = add_member(env, person, "member")  # the cap is for everyone in the organization
+    assert start(env, teammate, number=1, force=True).status_code == 429

@@ -18,6 +18,7 @@ from app.db.models import (
 )
 from app.jobs.dispatch import JobQueueUnavailable
 from app.schemas import IndexOut, SearchHit, SearchOut, SearchRequest
+from app.services.audit import record_audit
 from app.services.indexing.pipeline import abort_request, request_index
 from app.services.indexing.retrieval import search_hits
 from app.services.llm import CallContext, LLMError, LLMService
@@ -106,6 +107,16 @@ def start_index(
     except JobQueueUnavailable as exc:
         abort_request(db, repo.id, run_id, str(exc))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="repository.index_requested",
+        target_type="repository",
+        target_id=repo.id,
+        details={"repository": repo.full_name},
+    )
+    db.commit()
     return queued
 
 

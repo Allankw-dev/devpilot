@@ -35,6 +35,34 @@ Use the number from your provider's rate-limits page (the Google AI Studio free 
 **Last 24 hours** bar then fills up and turns red at the limit. Leave it unset to hide the bar.
 Restart the API after changing it.
 
+## Limits DevPilot enforces itself
+
+These stop one person, or one workspace, from using up your AI allowance. They are separate from
+the provider's own limits and from the **Last 24 hours** bar above.
+
+| Limit | Setting | Default |
+|---|---|---|
+| Questions per person per minute | `ASK_RATE_LIMIT_PER_MINUTE` | 10 |
+| Reviews started per person per minute | `REVIEW_RATE_LIMIT_PER_MINUTE` | 5 |
+| CI analyses started per person per minute | `CI_RATE_LIMIT_PER_MINUTE` | 5 |
+| Ask, review and CI requests per **workspace** per UTC day | `AI_ORG_DAILY_REQUEST_LIMIT` | 0 (no cap) |
+
+How they behave:
+
+- **A slot is taken before any AI work starts**, with one atomic database statement. Fifty requests
+  arriving at the same moment get exactly as many slots as are left, and no more. (Before, the
+  count only grew after the AI had answered, so a burst all got through.) A test with real
+  concurrent connections on PostgreSQL checks this.
+- **Every attempt that gets past permission checks counts**, even if the answer then comes from an
+  earlier review, or the AI call later fails. A blocked request costs nothing.
+- **Windows are fixed, not sliding:** "this minute" and "this UTC day". Right at a boundary someone can
+  use up to twice the limit across two windows.
+- **The workspace cap counts requests, not provider calls.** One review can make several model
+  calls, and indexing (which embeds code) isn't counted at all.
+- **They work across several API servers**, because the counters live in the database, as long as the
+  servers' clocks agree to within a few seconds.
+- A blocked request gets a 429 with a message, and nothing is queued.
+
 ## Why the numbers may differ from your provider's
 
 - DevPilot counts **only requests it sent**. If the same API key is used by other apps, the provider

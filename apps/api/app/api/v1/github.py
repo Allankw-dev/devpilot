@@ -26,6 +26,7 @@ from app.schemas import (
     GithubStatusOut,
     InstallUrlOut,
 )
+from app.services.audit import record_audit
 from app.services.github.client import (
     GitHubClient,
     GitHubError,
@@ -185,6 +186,15 @@ def claim_installation(
     installation.repository_selection = str(info.get("repository_selection") or "all")[:10]
     installation.suspended_at = None if not info.get("suspended_at") else now
     db.delete(pending)  # single use
+    record_audit(
+        db,
+        org_id=pending.org_id,
+        actor_id=user.id,
+        action="github.installation_connected",
+        target_type="github_installation",
+        target_id=body.installation_id,
+        details={"account": installation.account_login},
+    )
     db.commit()
 
     if begin_sync(db, installation.id):
@@ -246,5 +256,15 @@ def trigger_sync(
 )
 def disconnect(installation_pk: uuid.UUID, ctx: AdminCtx, db: DbSession) -> None:
     """Removes the connection and our copy of its data. It does not uninstall the app on GitHub."""
-    db.delete(_get_installation(db, ctx.org.id, installation_pk))
+    installation = _get_installation(db, ctx.org.id, installation_pk)
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="github.installation_disconnected",
+        target_type="github_installation",
+        target_id=installation.installation_id,
+        details={"account": installation.account_login},
+    )
+    db.delete(installation)
     db.commit()

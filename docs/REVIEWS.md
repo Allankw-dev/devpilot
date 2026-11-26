@@ -68,7 +68,7 @@ available to them. Reviews need the worker running (`docs/INDEXING.md`), or `JOB
 | `REVIEW_MAX_DIFF_CHARS` | 60000 | size budget for those diffs (about 15k tokens) |
 | `REVIEW_MAX_OUTPUT_TOKENS` | 8192 | review size, including the model's hidden reasoning |
 | `REVIEW_MAX_FINDINGS` | 25 | findings kept per review |
-| `REVIEW_RATE_LIMIT_PER_MINUTE` | 5 | reviews one person can start a minute |
+| `REVIEW_RATE_LIMIT_PER_MINUTE` | 5 | reviews one person can start a minute (see `docs/USAGE.md`) |
 
 ## Troubleshooting
 

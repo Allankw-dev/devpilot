@@ -1,5 +1,6 @@
 "use client";
 
+import { AuditLogCard } from "@/components/team/audit-log-card";
 import { MembersCard } from "@/components/team/members-card";
 import { TeamsCard } from "@/components/team/teams-card";
 import { PageHeader } from "@/components/page-header";
@@ -21,6 +22,7 @@ export function TeamPage() {
       <div className="space-y-6">
         <MembersCard orgId={org.id} />
         <TeamsCard orgId={org.id} />
+        <AuditLogCard orgId={org.id} />
       </div>
     </>
   );

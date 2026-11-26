@@ -16,6 +16,7 @@ from app.services.llm.errors import LLMAuthError
 from tests.conftest import ON_POSTGRES, Person, World
 from tests.github_helpers import FakeGitHub
 from tests.index_helpers import REPO, IndexEnv, make_env
+from tests.test_audit_log import entries as audit_entries
 
 API = "/api/v1"
 PersonFactory = Callable[[str], Person]
@@ -221,3 +222,17 @@ def test_viewers_cannot_search_and_outsiders_get_404(env: IndexEnv, person: Pers
 def test_search_explains_it_needs_postgres(env: IndexEnv) -> None:
     res = search(env, query="login")
     assert res.status_code == 501
+
+
+def test_requesting_an_index_is_audited_and_a_refused_one_is_not(
+    env: IndexEnv, person: PersonFactory
+) -> None:
+    viewer = add_member(env, person, "viewer")
+    assert env.client.post(url(env), headers=viewer.headers).status_code == 403
+    assert env.client.post(url(env), headers=env.world.owner.headers).status_code == 202
+
+    log = audit_entries(env.client, env.world.owner, env.world.org_id)
+    [entry] = [e for e in log if e["action"] == "repository.index_requested"]
+    assert entry["target_type"] == "repository"
+    assert entry["details"] == {"repository": REPO}
+    assert entry["actor_email"] == env.world.owner.email

@@ -14,8 +14,10 @@ and roles. GitHub access is read-only.
 - Open-source files and a self-hosting guide (done in this release).
 - Security basics, part 1 (done): HTTP security headers, request IDs, separate liveness and readiness
   endpoints.
-- Security basics, part 2: an audit log, atomic AI usage limits, cancelling running jobs, enforcing the
-  web Content-Security-Policy once it has been checked in a browser.
+- Security basics, part 2 (done): an audit log that admins can read, and AI usage limits that
+  concurrent requests can't get past, with an optional daily cap per workspace.
+- Security basics, part 3: cancelling running jobs, and enforcing the web Content-Security-Policy once it
+  has been checked in a browser.
 - PostgreSQL row-level security as a second layer behind the existing organization checks.
 - Dockerfiles for the API and web app, and a documented production deployment.
 

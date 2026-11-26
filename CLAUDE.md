@@ -31,6 +31,10 @@ Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worke
   either is down. Neither ever returns the cause of a failure.
 - Web security headers live in `apps/web/lib/security-headers.mjs`. The CSP is report-only until it has
   been checked in a browser; framing and HSTS headers are production-only (VS Code's browser frames the dev page).
+- Take an AI usage slot with `services/limits` (`enforce_user_rate`, `enforce_org_daily`) **before** any
+  AI call. Never count finished calls and compare: concurrent requests would all pass.
+- Member, team, GitHub-connection and AI-work actions call `record_audit` in the same transaction as the
+  action, only when they actually happen. Never put secrets, tokens, prompts, answers or code in `details`.
 
 ## Commands
 - API: `cd apps/api && pytest && ruff check . && mypy .`

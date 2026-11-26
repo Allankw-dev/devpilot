@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -26,6 +25,8 @@ from app.schemas import (
     ReviewOut,
     ReviewStart,
 )
+from app.services.audit import record_audit
+from app.services.limits import enforce_org_daily, enforce_user_rate
 from app.services.review.pipeline import abort_review, request_review
 from app.services.review.review import SEVERITY_RANK
 
@@ -95,24 +96,6 @@ def _review_out(db: Session, review: PullRequestReview, pr: PullRequest) -> Revi
         stale=_stale(review, pr),
         findings=[_finding_out(f) for f in ordered],
     )
-
-
-def _check_review_rate(db: Session, user_id: uuid.UUID, per_minute: int) -> None:
-    """Reviews cost tokens. Counts reviews this person asked for, so even a burst of requests
-    made before any finishes is limited."""
-    recent = db.scalar(
-        select(func.count())
-        .select_from(PullRequestReview)
-        .where(
-            PullRequestReview.requested_by == user_id,
-            PullRequestReview.queued_at >= datetime.now(UTC) - timedelta(seconds=60),
-        )
-    )
-    if (recent or 0) >= per_minute:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "You're requesting a lot of reviews. Wait a minute and try again.",
-        )
 
 
 # ---------- routes ----------
@@ -246,7 +229,10 @@ def start_review(
         if at_least(ctx.role, Role.admin):
             detail = "Missing settings: " + ", ".join(missing)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail)
-    _check_review_rate(db, ctx.user.id, settings.review_rate_limit_per_minute)
+    enforce_user_rate(
+        db, ctx.user.id, "review", settings.review_rate_limit_per_minute, what="reviews"
+    )
+    enforce_org_daily(db, settings, ctx.org.id)
 
     request = request_review(db, pr, ctx.user.id, force=bool(body and body.force))
     review = request.review
@@ -265,6 +251,16 @@ def start_review(
     except JobQueueUnavailable as exc:
         abort_review(db, review.id, review.run_id, str(exc))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="review.requested",
+        target_type="pull_request",
+        target_id=pr.id,
+        details={"number": pr.number, "force": bool(body and body.force)},
+    )
+    db.commit()
     response.status_code = status.HTTP_202_ACCEPTED
     return queued
 
@@ -285,5 +281,14 @@ def update_finding(
     if finding is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Finding not found")
     finding.status = body.status
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="review.finding_updated",
+        target_type="review_finding",
+        target_id=finding.id,
+        details={"status": body.status},
+    )
     db.commit()
     return _finding_out(finding)

@@ -53,6 +53,8 @@ One JSON object per line:
 
 - `request_id` is present only on lines written while handling a request (not in worker jobs).
 - `http` is present only on the access line. It never holds the query string, headers or body.
+- `audit` is present only on `app.audit` lines, one per audit-log event, with ids and the action but
+  no names or emails (see [`AUDIT.md`](AUDIT.md)). Its `request_id` matches the audit entry's.
 - Health probes are logged at `DEBUG`; set `LOG_LEVEL=DEBUG` to see them.
 - A failed health check is one `WARNING` line naming the error class. The traceback is at `DEBUG`.
 
@@ -63,6 +65,14 @@ One JSON object per line:
 | `ENVIRONMENT` | `development` | `production` turns on HSTS and switches off the API docs |
 | `LOG_LEVEL` | `INFO` | `DEBUG` also shows probes and health-check tracebacks |
 | `DB_CONNECT_TIMEOUT_SECONDS` | `5` | how long a database connection attempt may take |
+| `AI_ORG_DAILY_REQUEST_LIMIT` | `0` | cap on Ask, review and CI requests per workspace per UTC day; 0 is no cap |
+
+## Tables that grow
+
+- `audit_logs` grows with activity and is kept until the workspace is deleted. There is no retention
+  setting yet.
+- `rate_counters` cleans itself: each new window deletes that counter's finished windows, so it holds
+  roughly one row per active person and feature.
 
 ## Not available yet
 

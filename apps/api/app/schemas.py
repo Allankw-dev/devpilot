@@ -61,6 +61,24 @@ class MemberOut(BaseModel):
     joined_at: datetime
 
 
+class AuditLogOut(BaseModel):
+    id: uuid.UUID
+    action: str  # e.g. "member.role_changed"
+    actor_id: uuid.UUID | None  # None once that user's account is gone
+    actor_email: str | None
+    actor_name: str | None
+    target_type: str | None
+    target_id: str | None
+    details: dict[str, object] | None
+    request_id: str | None  # find the matching log lines with this
+    created_at: datetime
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogOut]
+    next_before: uuid.UUID | None  # pass as `before` to get the next, older page
+
+
 class MemberAdd(BaseModel):
     email: Email
     role: Role = Role.member

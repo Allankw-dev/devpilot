@@ -3,6 +3,72 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Security foundations, milestone B (2026-11-26)
+
+- **Found by reading the code:** the Ask limit counted `llm_usage` rows, which are written *after* the
+  model answers, so a burst of parallel questions all passed the check. The review and CI limits counted
+  queued rows with a read-then-insert, which is also racy. No per-organization cap existed.
+- **Atomic limits.** New table `rate_counters` and `services/limits.py`: one `INSERT ... ON CONFLICT DO
+  UPDATE ... WHERE count < limit RETURNING` takes a slot, in its own short transaction (so the row lock
+  isn't held during a slow AI call). Replaces `api/ratelimit.py`, `_check_rate` (CI) and
+  `_check_review_rate`. Fixed windows, documented. New optional `AI_ORG_DAILY_REQUEST_LIMIT`.
+  Behavior change: a request answered from a cached review or analysis now uses a slot.
+- **Audit log.** New table `audit_logs`, `services/audit.py` and `GET /orgs/{id}/audit-log` (admin/owner,
+  newest first, keyset paging, optional action filter). Recorded in the same transaction as the action;
+  only for actions that actually happen. `org.deleted` is log-only because the rows cascade away with the
+  organization. Each entry stores the request id. Team page card shows it, with "Load older entries".
+- Migration 0009 (hand-written like the others) creates both tables.
+- Verified: ruff and mypy clean; API 796 passed, 15 skipped (SQLite); **809 passed, 2 skipped on
+  PostgreSQL 16 with pgvector** (first time the PostgreSQL suite was run in this review); `alembic
+  upgrade head`, `alembic check` and a downgrade/upgrade of 0009 pass; web lint, `tsc`, 253 tests and the
+  production build pass. The limiter's concurrency test (60 callers, 16 threads, limit 5) gives exactly 5
+  slots, and fails against a deliberately naive read-then-write version.
+- **Not** verified: the new card in a browser; behavior under real multi-server load; clock skew between
+  servers; the Docker Compose setup.
+- Open: milestone C (cancel running and queued jobs); audit retention and export; limits for indexing.
+
+## Security foundations, milestone A (2026-11-24)
+
+- API: new `core/middleware.py` (pure ASGI, so streaming still works) gives each request an id,
+  adds security headers, writes one access-log line and turns unexpected errors into a JSON 500 that
+  names only the request id. `core/logging.py` now adds `request_id` and the access fields to the JSON
+  log. New `/health/live` and `/health/ready`; `/health` unchanged for the web status panel.
+- Decisions: the middleware sits inside CORS so error responses still carry CORS headers; a caller's
+  `X-Request-ID` is kept only if it is 8 to 64 characters of `A-Za-z0-9._-`; the access log never holds
+  the query string, headers, body or client IP; API docs are off and HSTS is on when
+  `ENVIRONMENT=production`; CORS methods and headers narrowed to what `lib/api.ts` sends; DB connect
+  timeout 5 s; a failed health probe is one warning line, with the traceback only at DEBUG (probes run
+  every few seconds, so tracebacks would flood the log during an outage).
+- Web: `lib/security-headers.mjs` sets nosniff, referrer and permissions policies everywhere;
+  `X-Frame-Options` and HSTS only in production, because VS Code's built-in browser shows the dev page
+  in a frame. The CSP is **report-only** because it could not be tested in a real browser here, and it
+  allows inline scripts because Next.js needs them without a nonce.
+- Verified: ruff and mypy clean; API 760 passed, 14 skipped (SQLite); web lint, `tsc`, 225 tests and
+  the production build pass. Headers confirmed with `curl` against a real `uvicorn`, `next start`
+  (production) and `next dev`. Deliberately breaking the middleware (no id sanitising, logging the
+  query string, leaking the exception text) made the new tests fail.
+- **Not** verified: the PostgreSQL suite, `alembic check`, Docker Compose, any browser (so the CSP
+  console output is unseen), a real database or Redis outage against `/health/ready`.
+- Open: look at the browser console, then enforce the CSP; then milestone B (audit log, atomic AI usage
+  limits, job cancellation).
+
+## Open-source readiness (2026-11-24)
+
+- Added `LICENSE` (Apache-2.0) and `NOTICE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor
+  Covenant 2.1), `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `ROADMAP.md`, issue forms, a pull
+  request template and Dependabot (npm and GitHub Actions). New guide: `docs/SELF_HOSTING.md`.
+- Found by reading the repo against the full project brief, and fixed: the README and `.env.example`
+  said PostgreSQL is on host port 5433 while `docker-compose.yml` uses 15433; a stray `/` and a
+  trailing period in the README; the empty "echo Hello" `.vscode/tasks.json` template was removed.
+- Found and recorded, not changed: `npm audit` now reports 2 findings, not 13 (see Known issues in
+  `IMPLEMENTATION_STATUS.md`); a stored-credentials gap suspected during the review does not exist, because
+  the app keeps no tokens or keys in the database (GitHub installation tokens are cached in memory).
+- Verified on a fresh clone: ruff and mypy clean; API 719 passed, 14 skipped (SQLite); web lint,
+  `tsc`, 217 tests and the production build pass. **Not** run: the PostgreSQL suite, `alembic check`,
+  Docker Compose, anything in a browser. This change is documentation and templates only.
+- Open: switch on private vulnerability reporting and Discussions in the repository settings; then the
+  security basics listed under "Now" in `ROADMAP.md`.
+
 ## Web stack upgrade: Next 16, Tailwind 4, ESLint 9 (2026-11-22)
 
 - **Why:** `npm audit` reported 13 production vulnerabilities (12 high), all from Next 15 and the

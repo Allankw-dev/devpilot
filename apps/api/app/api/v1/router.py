@@ -4,6 +4,7 @@ from app.api.v1 import (
     ai,
     analytics,
     ask,
+    audit,
     ci,
     conversations,
     dashboard,
@@ -25,6 +26,7 @@ api_router.include_router(me.router)
 api_router.include_router(orgs.router)
 api_router.include_router(teams.router)
 api_router.include_router(ai.router)
+api_router.include_router(audit.router)
 api_router.include_router(ask.router)
 api_router.include_router(github.router)
 api_router.include_router(indexing.router)

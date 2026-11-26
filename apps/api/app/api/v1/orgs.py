@@ -17,6 +17,7 @@ from app.schemas import (
     OrgWithRole,
 )
 from app.services import orgs as org_service
+from app.services.audit import record_audit
 
 router = APIRouter(prefix="/orgs", tags=["organizations"])
 
@@ -41,6 +42,15 @@ def _org_with_role(org: Organization, role: Role) -> OrgWithRole:
 def create_org(body: OrgCreate, user: CurrentUser, db: DbSession) -> OrgWithRole:
     try:
         org = org_service.create_org(db, user, body.name)
+        record_audit(
+            db,
+            org_id=org.id,
+            actor_id=user.id,
+            action="org.created",
+            target_type="organization",
+            target_id=org.id,
+            details={"name": org.name},
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -55,6 +65,15 @@ def get_org(ctx: AnyMember) -> OrgWithRole:
 
 @router.patch("/{org_id}", response_model=OrgWithRole)
 def rename_org(body: OrgUpdate, ctx: AdminCtx, db: DbSession) -> OrgWithRole:
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="org.renamed",
+        target_type="organization",
+        target_id=ctx.org.id,
+        details={"from": ctx.org.name, "to": body.name},
+    )
     ctx.org.name = body.name
     db.commit()
     return _org_with_role(ctx.org, ctx.role)
@@ -62,6 +81,17 @@ def rename_org(body: OrgUpdate, ctx: AdminCtx, db: DbSession) -> OrgWithRole:
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_org(ctx: OwnerCtx, db: DbSession) -> None:
+    # The organization's audit rows go with it, so this event is only written to the log.
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="org.deleted",
+        target_type="organization",
+        target_id=ctx.org.id,
+        details={"name": ctx.org.name},
+        persist=False,
+    )
     db.delete(ctx.org)
     db.commit()
 
@@ -89,6 +119,15 @@ def add_member(body: MemberAdd, ctx: AdminCtx, db: DbSession) -> MemberOut:
 
     membership = Membership(org_id=ctx.org.id, user_id=target.id, role=body.role.value)
     db.add(membership)
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="member.added",
+        target_type="user",
+        target_id=target.id,
+        details={"email": target.email, "role": body.role.value},
+    )
     db.commit()
     return _member_out(membership)
 
@@ -108,6 +147,15 @@ def change_role(
     current = Role(membership.role)
     org_service.check_can_manage(ctx.role, current, body.role)
     org_service.guard_last_owner(db, ctx.org.id, current, body.role)
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="member.role_changed",
+        target_type="user",
+        target_id=user_id,
+        details={"email": membership.user.email, "from": current.value, "to": body.role.value},
+    )
     membership.role = body.role.value
     db.commit()
     return _member_out(membership)
@@ -122,6 +170,19 @@ def remove_member(user_id: uuid.UUID, ctx: AnyMember, db: DbSession) -> None:
         org_service.check_can_manage(ctx.role, current, None)
     org_service.guard_last_owner(db, ctx.org.id, current, None)
 
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="member.removed",
+        target_type="user",
+        target_id=user_id,
+        details={
+            "email": membership.user.email,
+            "role": current.value,
+            "self": user_id == ctx.user.id,
+        },
+    )
     org_service.remove_member(db, ctx.org.id, membership)
     db.commit()
 

@@ -22,6 +22,7 @@ from app.schemas import (
     AiUsageModelOut,
     AiUsageOut,
 )
+from app.services.audit import record_audit
 from app.services.llm import CallContext, GenerationRequest, LLMService, Message
 from app.services.llm.errors import LLMError
 
@@ -65,8 +66,19 @@ def ai_status(ctx: AnyMember, db: DbSession, settings: Config) -> AiStatusOut:
 
 
 @router.post("/orgs/{org_id}/ai/test", response_model=AiTestOut)
-def ai_test(ctx: AdminCtx, llm: Annotated[LLMService, Depends(get_llm)]) -> AiTestOut:
+def ai_test(
+    ctx: AdminCtx, db: DbSession, llm: Annotated[LLMService, Depends(get_llm)]
+) -> AiTestOut:
     """Sends one tiny prompt to check the API key and model work. Costs a few tokens."""
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="ai.connection_tested",
+        target_type="organization",
+        target_id=ctx.org.id,
+    )
+    db.commit()  # recorded even if the test then fails: it still costs a request
     started = time.monotonic()
     try:
         result = llm.generate(

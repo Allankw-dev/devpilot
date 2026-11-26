@@ -56,7 +56,8 @@ relevant code wasn't retrieved**: try a more specific question, choose the repos
 - The answer is displayed as plain text. Model output can never inject HTML, scripts or links;
   only validated citation numbers become links.
 - Search and answers are limited to your organization.
-- One person can ask `ASK_RATE_LIMIT_PER_MINUTE` questions a minute (default 10).
+- One person can ask `ASK_RATE_LIMIT_PER_MINUTE` questions a minute (default 10). The limit is
+  taken before the AI is called, so many questions sent at once can't get past it. See `docs/USAGE.md`.
 
 ## Settings
 

@@ -67,7 +67,7 @@ Logs are **not stored**. Only the short quotes that back the answer are kept.
 | `CI_MAX_LOG_BYTES` | 1000000 | the end of each job log kept after download |
 | `CI_MAX_LOG_CHARS` | 40000 | budget for log text sent to the model, across all jobs |
 | `CI_MAX_OUTPUT_TOKENS` | 4096 | analysis size, including the model's hidden reasoning |
-| `CI_RATE_LIMIT_PER_MINUTE` | 5 | analyses one person can start a minute |
+| `CI_RATE_LIMIT_PER_MINUTE` | 5 | analyses one person can start a minute (see `docs/USAGE.md`) |
 
 ## Troubleshooting
 

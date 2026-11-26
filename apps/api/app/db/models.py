@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -539,3 +539,44 @@ class ConversationMessage(Base):
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ---------- limits and audit ----------
+
+
+class RateCounter(Base):
+    """How many times something happened inside one time window, e.g. one person's questions in
+    this minute. Rows are bumped with a single atomic upsert (see services/limits.py), so
+    concurrent requests can't slip past a limit. Old windows are deleted as new ones are written."""
+
+    __tablename__ = "rate_counters"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    window: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class AuditLog(Base):
+    """Who did what in an organization. Written in the same transaction as the action itself, so
+    there is no action without a record. Append-only: no route edits or deletes a row. It never
+    holds tokens, prompts, replies or code. Deleting an organization deletes its audit rows too."""
+
+    __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_org_id_created_at", "org_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    action: Mapped[str] = mapped_column(String(60))  # e.g. "member.role_changed"
+    target_type: Mapped[str | None] = mapped_column(String(40))
+    target_id: Mapped[str | None] = mapped_column(String(64))
+    details: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    request_id: Mapped[str | None] = mapped_column(String(64))  # matches the API log lines
+    # Set in Python as well, so rows written in one request keep their order to the microsecond.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), server_default=func.now()
+    )

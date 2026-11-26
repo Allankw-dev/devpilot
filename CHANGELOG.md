@@ -9,6 +9,9 @@ everything sits under Unreleased. Day-by-day detail and test numbers are in
 
 ### Added
 
+- Audit log: member, team, GitHub-connection and AI-work actions are recorded and shown to admins and
+  owners on the Team page (`GET /api/v1/orgs/{org_id}/audit-log`, `docs/AUDIT.md`).
+- Optional per-workspace daily cap on AI requests (`AI_ORG_DAILY_REQUEST_LIMIT`, off by default).
 - API security headers, `X-Request-ID` on every response, an access log without query strings, and a
   JSON 500 that names only the request id.
 - `/api/v1/health/live` and `/api/v1/health/ready` (the existing `/health` keeps working).
@@ -35,6 +38,10 @@ everything sits under Unreleased. Day-by-day detail and test numbers are in
 
 ### Changed
 
+- AI usage limits (Ask, reviews, CI analyses) are now taken atomically before the AI call. Previously
+  Ask counted finished answers, so a burst of parallel questions all got through.
+- A review or CI analysis request now counts against the limit even when it is answered from an
+  earlier result.
 - CORS now allows only the methods and request headers the web app uses.
 - With `ENVIRONMENT=production` the API docs are switched off and HSTS is sent.
 - Database connections give up after 5 seconds (`DB_CONNECT_TIMEOUT_SECONDS`).

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import AdminCtx, AnyMember, DbSession
 from app.db.models import Membership, Team, TeamMember
 from app.schemas import TeamCreate, TeamMemberAdd, TeamMemberOut, TeamOut
+from app.services.audit import record_audit
 
 router = APIRouter(prefix="/orgs/{org_id}/teams", tags=["teams"])
 
@@ -45,6 +46,16 @@ def create_team(body: TeamCreate, ctx: AdminCtx, db: DbSession) -> TeamOut:
     team = Team(org_id=ctx.org.id, name=body.name)
     db.add(team)
     try:
+        db.flush()
+        record_audit(
+            db,
+            org_id=ctx.org.id,
+            actor_id=ctx.user.id,
+            action="team.created",
+            target_type="team",
+            target_id=team.id,
+            details={"name": team.name},
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -56,7 +67,17 @@ def create_team(body: TeamCreate, ctx: AdminCtx, db: DbSession) -> TeamOut:
 
 @router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_team(team_id: uuid.UUID, ctx: AdminCtx, db: DbSession) -> None:
-    db.delete(_get_team(db, ctx.org.id, team_id))
+    team = _get_team(db, ctx.org.id, team_id)
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="team.deleted",
+        target_type="team",
+        target_id=team.id,
+        details={"name": team.name},
+    )
+    db.delete(team)
     db.commit()
 
 
@@ -89,6 +110,15 @@ def add_team_member(
 
     tm = TeamMember(team_id=team.id, user_id=body.user_id)
     db.add(tm)
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="team.member_added",
+        target_type="user",
+        target_id=body.user_id,
+        details={"team": team.name},
+    )
     db.commit()
     return TeamMemberOut(user_id=tm.user_id, email=tm.user.email, display_name=tm.user.display_name)
 
@@ -101,5 +131,14 @@ def remove_team_member(
     tm = db.get(TeamMember, (team.id, user_id))
     if tm is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Team member not found")
+    record_audit(
+        db,
+        org_id=ctx.org.id,
+        actor_id=ctx.user.id,
+        action="team.member_removed",
+        target_type="user",
+        target_id=user_id,
+        details={"team": team.name},
+    )
     db.delete(tm)
     db.commit()
