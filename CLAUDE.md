@@ -35,6 +35,8 @@ Postgres + pgvector, Redis, Celery (worker: `celery -A app.jobs.celery_app worke
   AI call. Never count finished calls and compare: concurrent requests would all pass.
 - Member, team, GitHub-connection and AI-work actions call `record_audit` in the same transaction as the
   action, only when they actually happen. Never put secrets, tokens, prompts, answers or code in `details`.
+- UI follows `docs/DESIGN.md`: no gradients, glow or blur; color only for status (green, amber, red);
+  primary is ink, not a hue; tables and lists instead of card grids; mono for anything copyable.
 
 ## Commands
 - API: `cd apps/api && pytest && ruff check . && mypy .`

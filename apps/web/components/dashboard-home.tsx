@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 const RANGES = [7, 14, 30] as const;
 const fmt = new Intl.NumberFormat();
-const CHART_COLORS = { commits: "hsl(var(--primary))", prs: "hsl(var(--purple))", calls: "hsl(var(--cyan))" };
+const CHART_COLORS = { commits: "hsl(var(--primary))", prs: "hsl(var(--muted-foreground))", calls: "hsl(var(--primary))" };
 
 function StatCard({ label, value, hint, tone }: { label: string; value: number; hint?: string; tone?: string }) {
   return (

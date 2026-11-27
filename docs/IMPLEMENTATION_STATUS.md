@@ -27,7 +27,7 @@ are no end-to-end tests. Check the layout by eye before relying on it.
 - [x] FastAPI, PostgreSQL, SQLAlchemy 2, Alembic (9 migrations, `alembic check` in CI)
 - [x] Supabase authentication, organizations, roles (owner, admin, member, viewer), teams
 - [x] Docker Compose for the database and Redis
-- [x] Design system: dark-first palette from the brief, light theme, Inter and JetBrains Mono
+- [x] Design system: flat, neutral, dark-first palette with ink as the primary color (no accent hue; color is for status only), light theme, IBM Plex Sans and Mono; tokens, fonts and chart colors are in code, the screen layouts are designed in Figma and not yet applied (`docs/DESIGN.md`)
 - [x] App shell: sidebar (collapsible), mobile drawer, top bar with breadcrumbs, theme toggle,
       workspace switcher, usage meter, sign out
 - [x] Dashboard with real data (counts, activity chart, AI usage chart, recent lists)

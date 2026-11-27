@@ -38,6 +38,9 @@ everything sits under Unreleased. Day-by-day detail and test numbers are in
 
 ### Changed
 
+- New look: flat and neutral with no accent hue (color is reserved for status), tighter corners and
+  IBM Plex Sans and Mono instead of Inter and JetBrains Mono. Purple and cyan are gone from charts and
+  the workspace badge. Design guide: `docs/DESIGN.md`.
 - AI usage limits (Ask, reviews, CI analyses) are now taken atomically before the AI call. Previously
   Ask counted finished answers, so a burst of parallel questions all got through.
 - A review or CI analysis request now counts against the limit even when it is answered from an

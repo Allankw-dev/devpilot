@@ -3,6 +3,24 @@
 Newest first. Each entry says what changed, what was run, and what is still open. Test numbers are
 from runs that were actually executed.
 
+## Design pass 1 (2026-11-26)
+
+- Reviewed the Next 16 / Tailwind 4 upgrade commit: logic changes read correctly; fixed what it broke
+  (it overwrote earlier doc updates, left `components.json` pointing at a deleted Tailwind config, and
+  left outdated `npm audit` notes). Added a second lockfile, `apps/api/uv.lock`, that disagrees with
+  `requirements.lock` (SQLAlchemy 2.0.58 against 2.0.57); not removed, flagged.
+- Found: the code has no gradients at all; purple appeared only on the workspace badge and three chart
+  series. The "AI dashboard" feel came from the palette (navy with blue, purple and cyan accents).
+- Figma file created with variables (Color dark, Color Light, spacing and radius), IBM Plex text styles,
+  components and three screens (`docs/DESIGN.md` has the status). The Figma MCP call limit on the
+  Starter plan was reached before the remaining screens could be drawn.
+- Code: new tokens in `globals.css`, IBM Plex through Fontsource (replacing Inter and JetBrains Mono),
+  `--purple` and `--cyan` removed, charts use ink and grays, workspace badge is neutral.
+- Verified: ESLint, `tsc`, 253 tests, production build and `npm audit` (0 findings) pass.
+- **Not** verified: how it looks in a browser (none available where this was built), contrast in the
+  real UI, the light theme. Decisions to check by eye: `text-primary` links are now near-white and rely
+  on underline on hover; the focus ring is the primary color.
+
 ## Security foundations, milestone B (2026-11-26)
 
 - **Found by reading the code:** the Ask limit counted `llm_usage` rows, which are written *after* the

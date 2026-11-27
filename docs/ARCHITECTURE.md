@@ -61,7 +61,7 @@ already groups code by feature and every import and test depends on it.
 - Design tokens are CSS variables in `app/globals.css` (dark by default, `.light` class for the
   light theme) and are mapped to Tailwind colors in the `@theme` block of the same file (Tailwind 4
   has no JavaScript config). `proxy.ts` refreshes the sign-in session on every page request.
-- Fonts (Inter, JetBrains Mono) are self-hosted through Fontsource, so no request goes to Google.
+- Fonts (IBM Plex Sans, IBM Plex Mono) are self-hosted through Fontsource, so no request goes to Google. The look is described in `docs/DESIGN.md`.
 - Tests: Vitest and Testing Library in `apps/web/tests`.
 
 ## Data

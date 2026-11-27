@@ -35,7 +35,7 @@ const SEVERITY_COLOR: Record<string, string> = {
   critical: "hsl(var(--danger))",
   high: "hsl(var(--warning))",
   medium: "hsl(var(--primary))",
-  low: "hsl(var(--cyan))",
+  low: "hsl(var(--chart-3))",
   info: "hsl(var(--muted-foreground))",
 };
 
@@ -177,8 +177,8 @@ export function AnalyticsPage() {
                 <YAxis allowDecimals={false} stroke={AXIS} fontSize={11} width={28} />
                 <Tooltip {...TOOLTIP} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="reviews_finished" name="Reviews" stackId="ai" fill="hsl(var(--purple))" />
-                <Bar dataKey="ci_analyses_finished" name="CI analyses" stackId="ai" fill="hsl(var(--cyan))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="reviews_finished" name="Reviews" stackId="ai" fill="hsl(var(--muted-foreground))" />
+                <Bar dataKey="ci_analyses_finished" name="CI analyses" stackId="ai" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ChartCard>
 
@@ -234,7 +234,7 @@ export function AnalyticsPage() {
                 <Tooltip {...TOOLTIP} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="input_tokens" name="Input" stackId="tokens" fill="hsl(var(--primary))" />
-                <Bar dataKey="output_tokens" name="Output" stackId="tokens" fill="hsl(var(--purple))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="output_tokens" name="Output" stackId="tokens" fill="hsl(var(--muted-foreground))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ChartCard>
           </div>

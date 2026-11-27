@@ -59,7 +59,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-2 py-2 text-left text-sm hover:bg-muted"
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-purple text-xs font-semibold text-white">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border-strong bg-elevated text-xs font-semibold text-foreground">
           {initial}
         </span>
         {!collapsed && (
